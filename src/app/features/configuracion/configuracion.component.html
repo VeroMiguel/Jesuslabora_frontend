@@ -1,0 +1,356 @@
+<div class="config-container">
+
+  <!-- ── Encabezado ─────────────────────────────────────────────────────────── -->
+  <div class="config-header">
+    <div class="header-title">
+      <div class="header-icon">
+        <i class="fas fa-sliders-h"></i>
+      </div>
+      <div>
+        <h1>Configuración</h1>
+        <p class="header-subtitle">Personaliza el comportamiento del sistema</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="restaurarDefectos()" type="button">
+        <i class="fas fa-undo"></i> Restaurar defectos
+      </button>
+      <button
+        class="btn-primary"
+        (click)="guardar()"
+        [disabled]="guardando || form.invalid"
+        type="button">
+        <i class="fas" [ngClass]="guardando ? 'fa-spinner fa-spin' : guardadoExitoso ? 'fa-check' : 'fa-save'"></i>
+        {{ guardando ? 'Guardando…' : guardadoExitoso ? '¡Guardado!' : 'Guardar cambios' }}
+      </button>
+    </div>
+  </div>
+
+  <form [formGroup]="form" class="config-body">
+
+    <!-- ── Sección: Seguridad de sesión ───────────────────────────────────── -->
+    <section class="config-section">
+      <div class="section-header">
+        <div class="section-icon session-icon">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div>
+          <h2>Seguridad de sesión</h2>
+          <p>Controla cuándo se cierra la sesión por inactividad</p>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="field-group">
+          <div class="field-label-row">
+            <label for="tiempoCierre">
+              <i class="fas fa-clock"></i> Tiempo de cierre automático
+            </label>
+            <span class="value-badge session-badge">
+              {{ formatMinutos(f['tiempoCierreAutomatico'].value) }}
+            </span>
+          </div>
+          <p class="field-hint">
+            La sesión se cerrará automáticamente tras este período de inactividad.
+          </p>
+          
+          <!-- ✅ Botones en lugar de slider -->
+          <div class="option-buttons-container">
+            <button type="button"
+                    *ngFor="let opcion of opcionesCierre"
+                    class="option-btn"
+                    [class.active]="f['tiempoCierreAutomatico'].value === opcion.valor"
+                    (click)="f['tiempoCierreAutomatico'].setValue(opcion.valor)">
+              {{ opcion.texto }}
+            </button>
+          </div>
+          
+          <div class="field-error" *ngIf="f['tiempoCierreAutomatico'].invalid && f['tiempoCierreAutomatico'].touched">
+            El valor debe estar entre 5 y 480 minutos.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Sección: Notificaciones ─────────────────────────────────────────── -->
+    <section class="config-section">
+      <div class="section-header">
+        <div class="section-icon notif-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div>
+          <h2>Notificaciones</h2>
+          <p>Configura cómo y cuándo recibirás alertas</p>
+        </div>
+      </div>
+
+      <!-- Tiempo de anticipación -->
+      <div class="config-card">
+        <div class="field-group">
+          <div class="field-label-row">
+            <label for="tiempoNotif">
+              <i class="fas fa-hourglass-half"></i> Tiempo de notificación anticipada
+            </label>
+            <span class="value-badge notif-badge">
+              {{ formatMinutos(f['tiempoNotificacionAnticipada'].value) }}
+            </span>
+          </div>
+          <p class="field-hint">
+            Recibirás una alerta este tiempo antes del vencimiento de una orden.
+          </p>
+          
+          <!-- ✅ Botones en lugar de slider -->
+          <div class="option-buttons-container">
+            <button type="button"
+                    *ngFor="let opcion of opcionesNotificacion"
+                    class="option-btn"
+                    [class.active]="f['tiempoNotificacionAnticipada'].value === opcion.valor"
+                    (click)="f['tiempoNotificacionAnticipada'].setValue(opcion.valor)">
+              {{ opcion.texto }}
+            </button>
+          </div>
+          
+          <div class="field-error" *ngIf="f['tiempoNotificacionAnticipada'].invalid && f['tiempoNotificacionAnticipada'].touched">
+            El valor debe estar entre 5 y 1440 minutos.
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggles de notificación -->
+      <div class="config-card toggles-card">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <i class="fas fa-mobile-alt toggle-icon notif-icon-sm"></i>
+            <div>
+              <span class="toggle-label">Notificaciones push</span>
+              <span class="toggle-desc">Recibe alertas en el navegador</span>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" formControlName="notificacionesPushHabilitadas">
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="toggle-divider"></div>
+
+        <div class="toggle-row" [class.disabled-row]="!f['notificacionesPushHabilitadas'].value">
+          <div class="toggle-info">
+            <i class="fas fa-volume-up toggle-icon sound-icon-sm"></i>
+            <div>
+              <span class="toggle-label">Sonido</span>
+              <span class="toggle-desc">Reproduce un tono al recibir alertas</span>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" formControlName="sonidoHabilitado"
+                   [attr.disabled]="!f['notificacionesPushHabilitadas'].value ? true : null">
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="toggle-divider"></div>
+
+        <div class="toggle-row" [class.disabled-row]="!f['notificacionesPushHabilitadas'].value">
+          <div class="toggle-info">
+            <i class="fas fa-vibrate toggle-icon vibrate-icon-sm"></i>
+            <div>
+              <span class="toggle-label">Vibración</span>
+              <span class="toggle-desc">Vibra el dispositivo al recibir alertas</span>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" formControlName="vibracionHabilitada"
+                   [attr.disabled]="!f['notificacionesPushHabilitadas'].value ? true : null">
+            <span class="toggle-track">
+              <span class="toggle-thumb"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Estado del permiso de notificaciones -->
+      <div class="permission-banner"
+           [class.permission-granted]="permisoNotificacion === 'granted'"
+           [class.permission-denied]="permisoNotificacion === 'denied'"
+           [class.permission-default]="permisoNotificacion === 'default'">
+        <div class="permission-info">
+          <i class="fas"
+             [class.fa-check-circle]="permisoNotificacion === 'granted'"
+             [class.fa-times-circle]="permisoNotificacion === 'denied'"
+             [class.fa-question-circle]="permisoNotificacion === 'default'"></i>
+          <div>
+            <span class="permission-label">
+              <ng-container *ngIf="permisoNotificacion === 'granted'">✅ Notificaciones activadas</ng-container>
+              <ng-container *ngIf="permisoNotificacion === 'denied'">❌ Notificaciones bloqueadas</ng-container>
+              <ng-container *ngIf="permisoNotificacion === 'default'">⚠️ Permiso pendiente</ng-container>
+            </span>
+            <span class="permission-desc">
+              <ng-container *ngIf="permisoNotificacion === 'granted'">Recibirás alertas en tu celular incluso con la app cerrada.</ng-container>
+              <ng-container *ngIf="permisoNotificacion === 'denied'">Ve a Configuración del navegador → Notificaciones → Permitir para este sitio.</ng-container>
+              <ng-container *ngIf="permisoNotificacion === 'default'">Haz clic en "Activar notificaciones" para recibir alertas en tu celular.</ng-container>
+            </span>
+          </div>
+        </div>
+        <button *ngIf="permisoNotificacion !== 'granted'"
+                class="btn-permission"
+                (click)="solicitarPermisoNotificacion()"
+                type="button">
+          <i class="fas fa-bell"></i> Activar notificaciones
+        </button>
+      </div>
+
+      <!-- Service Worker status -->
+      <div class="sw-status" *ngIf="swSoportado">
+        <i class="fas fa-cog fa-spin sw-icon"></i>
+        <span>Service Worker activo — notificaciones funcionan con app cerrada</span>
+      </div>
+
+      <!-- Botón probar notificación -->
+      <div class="test-notif-row">
+        <button class="btn-test" (click)="probarNotificacion()" type="button">
+          <i class="fas fa-paper-plane"></i> Probar notificación real
+        </button>
+        <span class="test-hint">Envía una notificación REAL a tu dispositivo ahora mismo</span>
+      </div>
+
+      <!-- Panel FCM — Notificaciones en celular -->
+      <div class="fcm-panel">
+        <div class="fcm-panel-header">
+          <div class="fcm-icon-wrap">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <div class="fcm-panel-info">
+            <span class="fcm-title">Notificaciones en celular (Firebase)</span>
+            <span class="fcm-desc">Recibe alertas incluso con el navegador cerrado</span>
+          </div>
+          <span class="fcm-badge"
+            [class.fcm-badge-ok]="fcmService.estaListo && notificationService.tokenFcm"
+            [class.fcm-badge-warn]="!fcmService.tieneConfigReal"
+            [class.fcm-badge-off]="fcmService.estadoActual === 'no-permission' || fcmService.estadoActual === 'error'">
+            <ng-container *ngIf="!fcmService.tieneConfigReal">⚠️ Sin configurar</ng-container>
+            <ng-container *ngIf="fcmService.tieneConfigReal && notificationService.tokenFcm">✅ Activo</ng-container>
+            <ng-container *ngIf="fcmService.tieneConfigReal && !notificationService.tokenFcm && fcmService.estadoActual !== 'error'">⭕ Inactivo</ng-container>
+            <ng-container *ngIf="fcmService.estadoActual === 'error'">❌ Error config</ng-container>
+          </span>
+        </div>
+
+        <p class="fcm-info" *ngIf="!fcmService.tieneConfigReal">
+          <i class="fas fa-info-circle"></i>
+          Para activar las notificaciones push en celular, reemplaza los valores
+          <code>PLACEHOLDER</code> en <code>src/environments/environment.prod.ts</code>
+          y <code>src/firebase-messaging-sw.js</code> con los datos reales de tu
+          proyecto Firebase (ver instrucciones en el PR).
+        </p>
+
+        <p class="fcm-token-info" *ngIf="notificationService.tokenFcm">
+          <i class="fas fa-check-circle"></i>
+          Token FCM registrado en este dispositivo. Las notificaciones push están activas.
+        </p>
+
+        <button
+          class="btn-fcm"
+          (click)="activarNotificacionesFcm()"
+          [disabled]="solicitandoFcm || !fcmService.tieneConfigReal"
+          type="button">
+          <i class="fas" [ngClass]="solicitandoFcm ? 'fa-spinner fa-spin' : 'fa-bell'"></i>
+          {{ solicitandoFcm ? 'Activando…' : notificationService.tokenFcm ? 'Renovar token FCM' : 'Activar en este dispositivo' }}
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ── Panel de estado actual ─────────────────────────────────────────── -->
+    <section class="config-section">
+      <div class="section-header">
+        <div class="section-icon status-icon">
+          <i class="fas fa-info-circle"></i>
+        </div>
+        <div>
+          <h2>Estado actual</h2>
+          <p>Resumen de la configuración que está activa ahora mismo</p>
+        </div>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-item">
+          <i class="fas fa-clock status-item-icon session-color"></i>
+          <div class="status-item-body">
+            <span class="status-item-label">Cierre automático</span>
+            <span class="status-item-value">{{ formatMinutos(f['tiempoCierreAutomatico'].value) }}</span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <i class="fas fa-hourglass-half status-item-icon notif-color"></i>
+          <div class="status-item-body">
+            <span class="status-item-label">Anticipación de alerta</span>
+            <span class="status-item-value">{{ formatMinutos(f['tiempoNotificacionAnticipada'].value) }}</span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <i class="fas fa-bell status-item-icon"
+             [class.notif-color]="f['notificacionesPushHabilitadas'].value"
+             [class.muted-color]="!f['notificacionesPushHabilitadas'].value"></i>
+          <div class="status-item-body">
+            <span class="status-item-label">Notificaciones push</span>
+            <span class="status-item-value"
+                  [class.status-on]="f['notificacionesPushHabilitadas'].value"
+                  [class.status-off]="!f['notificacionesPushHabilitadas'].value">
+              {{ f['notificacionesPushHabilitadas'].value ? 'Activadas' : 'Desactivadas' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <i class="fas fa-volume-up status-item-icon"
+             [class.sound-color]="f['sonidoHabilitado'].value"
+             [class.muted-color]="!f['sonidoHabilitado'].value"></i>
+          <div class="status-item-body">
+            <span class="status-item-label">Sonido</span>
+            <span class="status-item-value"
+                  [class.status-on]="f['sonidoHabilitado'].value"
+                  [class.status-off]="!f['sonidoHabilitado'].value">
+              {{ f['sonidoHabilitado'].value ? 'Activado' : 'Desactivado' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="status-item">
+          <i class="fas fa-vibrate status-item-icon"
+             [class.vibrate-color]="f['vibracionHabilitada'].value"
+             [class.muted-color]="!f['vibracionHabilitada'].value"></i>
+          <div class="status-item-body">
+            <span class="status-item-label">Vibración</span>
+            <span class="status-item-value"
+                  [class.status-on]="f['vibracionHabilitada'].value"
+                  [class.status-off]="!f['vibracionHabilitada'].value">
+              {{ f['vibracionHabilitada'].value ? 'Activada' : 'Desactivada' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Botones finales ─────────────────────────────────────────────────── -->
+    <div class="form-footer">
+      <button class="btn-secondary" (click)="restaurarDefectos()" type="button">
+        <i class="fas fa-undo"></i> Restaurar defectos
+      </button>
+      <button
+        class="btn-primary btn-lg"
+        (click)="guardar()"
+        [disabled]="guardando || form.invalid"
+        type="button">
+        <i class="fas" [ngClass]="guardando ? 'fa-spinner fa-spin' : guardadoExitoso ? 'fa-check' : 'fa-save'"></i>
+        {{ guardando ? 'Guardando…' : guardadoExitoso ? '¡Guardado!' : 'Guardar cambios' }}
+      </button>
+    </div>
+
+  </form>
+</div>

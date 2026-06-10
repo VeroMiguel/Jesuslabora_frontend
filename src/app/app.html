@@ -1,0 +1,58 @@
+<!-- Loading mientras se verifica autenticación -->
+<div class="auth-loading" *ngIf="(authService.authLoading$ | async) && authService.isAuthenticated()">
+  <div class="loading-spinner"></div>
+  <p>Verificando sesión...</p>
+</div>
+
+<!-- Navbar - Solo aparece DESPUÉS de verificar autenticación -->
+<ng-container *ngIf="!(authService.authLoading$ | async)">
+  <nav class="navbar" [class.menu-open-state]="menuOpen" *ngIf="authService.isAuthenticated()">
+    <div class="nav-container">
+      <a routerLink="/dashboard" class="nav-brand">
+        <i class="fas fa-tooth"></i> LAB.Demitrio
+      </a>
+      
+      <button class="menu-toggle" (click)="toggleMenu()" [class.active]="menuOpen">
+        <i class="fas" [ngClass]="{'fa-bars': !menuOpen, 'fa-times': menuOpen}"></i>
+      </button>
+      
+      <div class="menu-overlay" *ngIf="menuOpen" (click)="closeMenu()"></div>
+      
+      <div class="nav-menu" [class.open]="menuOpen">
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-chart-pie"></i> Inicio
+        </a>
+        <a routerLink="/ordenes" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-clipboard-list"></i> Órdenes
+        </a>
+        <a routerLink="/doctores" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-user-doctor"></i> Doctores
+        </a>
+        <a routerLink="/servicios" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-tooth"></i> Servicios
+        </a>
+        <a routerLink="/reportes" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-chart-bar"></i> Reportes
+        </a>
+        <a routerLink="/configuracion" routerLinkActive="active" class="nav-item" (click)="closeMenu()">
+          <i class="fas fa-sliders-h"></i> Configuración
+        </a>
+        <div class="nav-actions">
+          <button class="theme-toggle" (click)="toggleTheme(); closeMenu()" title="Cambiar tema">
+            <i class="fas" [ngClass]="{'fa-moon': currentTheme === 'dark', 'fa-sun': currentTheme === 'light'}"></i>
+          </button>
+          <button class="btn-logout" (click)="authService.logout()">
+            <i class="fas fa-sign-out-alt"></i> Salir
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+</ng-container>
+
+<main>
+  <router-outlet></router-outlet>
+</main>
+
+<!-- Modal de advertencia de inactividad de sesión -->
+<app-session-timeout></app-session-timeout>

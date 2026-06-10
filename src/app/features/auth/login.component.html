@@ -1,0 +1,56 @@
+<!-- login.component.html -->
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-icon">
+        <i class="fas fa-tooth"></i>
+      </div>
+      <h1>LAB.Demitrio</h1>
+      <p class="subtitle">Sistema de Gestión Dental</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="input-group">
+        <div class="input-icon">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="input-field">
+          <input 
+            type="text" 
+            formControlName="nombre_usuario" 
+            placeholder=" "
+            autocomplete="username">
+          <label>Usuario</label>
+          <div class="error-message" *ngIf="loginForm.get('nombre_usuario')?.touched && loginForm.get('nombre_usuario')?.hasError('required')">
+            <i class="fas fa-exclamation-circle"></i> El usuario es requerido
+          </div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <div class="input-field">
+          <input 
+            [type]="hidePassword ? 'password' : 'text'" 
+            formControlName="contrasena" 
+            placeholder=" "
+            autocomplete="current-password">
+          <label>Contraseña</label>
+          <button type="button" class="toggle-password" (click)="hidePassword = !hidePassword">
+            <i class="fas" [ngClass]="{'fa-eye-slash': hidePassword, 'fa-eye': !hidePassword}"></i>
+          </button>
+          <div class="error-message" *ngIf="loginForm.get('contrasena')?.touched && loginForm.get('contrasena')?.hasError('required')">
+            <i class="fas fa-exclamation-circle"></i> La contraseña es requerida
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="loginForm.invalid || isLoading">
+        <span *ngIf="!isLoading">INGRESAR</span>
+        <span *ngIf="isLoading" class="spinner"></span>
+      </button>
+    </form>
+  </div>
+</div>

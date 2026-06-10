@@ -1,0 +1,165 @@
+<div class="form-container">
+      <div class="header">
+        <h1>{{ esEdicion ? 'Editar' : 'Nueva' }} Orden</h1>
+        <button class="btn-secondary" routerLink="/ordenes">
+          <i class="fas fa-arrow-left"></i> Volver
+        </button>
+      </div>
+
+        <form [formGroup]="ordenForm" (ngSubmit)="onSubmit()" class="form">
+  <!-- En orden-form.component.html - Agregar *ngIf para esperar datos -->
+<div class="form-row">
+  <div class="form-group">
+    <label>Doctor *</label>
+    <app-searchable-select
+      *ngIf="doctores.length > 0"
+      formControlName="doctor_id"
+      [opciones]="doctores"
+      placeholder="Buscar doctor..."
+      [mostrarIcono]="true"
+      [mostrarDetalle]="true"
+    ></app-searchable-select>
+    <div *ngIf="doctores.length === 0" class="loading-select">
+      <i class="fas fa-spinner fa-spin"></i> Cargando doctores...
+    </div>
+  </div>
+
+<!-- Busca esta sección del servicio y reemplázala -->
+<div class="form-group">
+  <label>Servicio *</label>
+  <app-searchable-select
+    *ngIf="servicios.length > 0"
+    formControlName="servicio_id"
+    [opciones]="servicios"
+    placeholder="Buscar servicio..."
+    (selectionChange)="onServicioSeleccionado($event)"
+  ></app-searchable-select>
+  <div *ngIf="servicios.length === 0" class="loading-select">
+    <i class="fas fa-spinner fa-spin"></i> Cargando servicios...
+  </div>
+</div>
+</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Total (S/) *</label>
+            <input type="number" formControlName="total" class="form-control" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label>{{ esEdicion ? 'Total Abonado (S/)' : 'Pago Inicial (S/)' }}</label>
+            <input 
+                type="number" 
+                formControlName="pago_inicial" 
+                class="form-control" 
+                step="0.01"
+                [readonly]="esEdicion" 
+            >
+            <small *ngIf="esEdicion" class="text-muted">
+                * Para modificar el abonado, use la opción "Agregar Pago" en el detalle
+            </small>
+            </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Prioridad</label>
+            <select formControlName="prioridad" class="form-control">
+              <option value="normal">Normal</option>
+              <option value="urgente">Urgente</option>
+              <option value="emergencia">Emergencia</option>
+            </select>
+          </div>
+
+          <!-- Reemplazar el campo de fecha límite actual con este -->
+          <div class="form-group">
+            <label>Fecha Límite</label>
+            <div class="datetime-input-group">
+              <input type="date" formControlName="fecha_limite" class="form-control date-input">
+              <input type="time" formControlName="hora_limite" class="form-control time-input" placeholder="HH:MM">
+            </div>
+            <small class="text-muted">Formato: DD/MM/AAAA HH:MM</small>
+          </div>
+        </div>
+
+   <!-- Reemplaza la sección del cliente con esta versión mejorada -->
+<div class="form-group cliente-group">
+  <label>Cliente</label>
+  <input 
+      type="text" 
+      formControlName="cliente_nombre" 
+      class="form-control" 
+      placeholder="Nombre del paciente"
+  >
+</div>
+
+<!-- NUEVA SECCIÓN: Detalle del caso del cliente -->
+<div class="form-group detalle-group">
+  <label>Detalle del Caso <span class="optional">(Opcional)</span></label>
+  <textarea 
+      formControlName="detalle_cliente" 
+      class="form-control detalle-textarea" 
+      rows="3"
+      placeholder="Ej:Dos coronas de porcelana, necesita corona de zirconio">
+  </textarea>
+  <small class="text-muted">
+    <i class="fas fa-info-circle"></i> 
+    Especifique detalles como: pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
+  </small>
+</div>
+
+<!-- NUEVA SECCIÓN: Imagen de referencia para la orden -->
+    <div class="form-section">
+      <h2 class="section-title">Imagen de Referencia (Opcional)</h2>
+      
+      <div class="image-upload-container">
+        <!-- Preview de imagen -->
+        <div class="image-preview-card" *ngIf="previewUrl">
+          <div class="image-preview-wrapper">
+            <img [src]="previewUrl" 
+                 alt="Vista previa" 
+                 class="image-preview">
+            <button type="button" class="btn-remove-image" (click)="removerImagen()" 
+                    title="Eliminar imagen">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Controles de subida -->
+        <div class="upload-area" [class.has-image]="previewUrl">
+          <div class="file-input-wrapper">
+            <input type="file" 
+                   (change)="onFileSelected($event)" 
+                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                   class="file-input"
+                   #fileInput>
+            
+            <button type="button" class="btn-upload" (click)="fileInput.click()">
+              <i class="fas fa-cloud-upload-alt"></i>
+              {{ previewUrl ? 'Cambiar imagen' : 'Subir imagen de referencia' }}
+            </button>
+            
+            <span class="file-name">
+              {{ imagenSeleccionada?.name || 'Ningún archivo seleccionado' }}
+            </span>
+          </div>
+          
+         <!-- Cambia el texto de ayuda -->
+          <div class="upload-hint">
+            <i class="fas fa-info-circle"></i>
+            <span>Formatos permitidos: JPG, PNG, GIF, WEBP, HEIC. Máximo 15MB. Esta imagen será exclusiva para esta orden.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" routerLink="/ordenes">
+            Cancelar
+          </button>
+         <button type="submit" class="btn-primary" [disabled]="ordenForm.invalid || subiendoImagen">
+        <i class="fas" [ngClass]="{'fa-spinner fa-spin': subiendoImagen, 'fa-save': !subiendoImagen}"></i>
+        {{ subiendoImagen ? 'Guardando...' : (esEdicion ? 'Actualizar' : 'Guardar') }}
+      </button>
+        </div>
+      </form>
+    </div>

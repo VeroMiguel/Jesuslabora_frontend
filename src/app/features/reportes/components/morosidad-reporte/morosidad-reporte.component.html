@@ -1,0 +1,169 @@
+<div class="reporte-container">
+  <div class="header">
+    <h1><i class="fas fa-exclamation-triangle"></i> Reporte de Morosidad</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportarExcel()">
+        <i class="fas fa-file-excel"></i> Exportar Excel
+      </button>
+      <button class="btn-secondary" routerLink="/reportes">
+        <i class="fas fa-arrow-left"></i> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas de resumen -->
+  <div class="resumen-grid">
+    <div class="resumen-card glass">
+      <span class="label"><i class="fas fa-dollar-sign"></i> Deuda Total</span>
+     <span class="value" [ngClass]="{'deuda': resumen.deudaTotal > 0, 'deuda-cero': resumen.deudaTotal === 0}">
+  {{ resumen.deudaTotal | moneda }}
+</span>
+    </div>
+    <div class="resumen-card glass">
+      <span class="label"><i class="fas fa-users"></i> Clientes Morosos</span>
+      <span class="value">{{ resumen.clientesMorosos }}</span>
+    </div>
+    <div class="resumen-card glass">
+      <span class="label"><i class="fas fa-clock"></i> Órdenes Vencidas</span>
+      <span class="value">{{ resumen.ordenesVencidas }}</span>
+    </div>
+    <div class="resumen-card glass">
+      <span class="label"><i class="fas fa-chart-line"></i> Promedio Deuda</span>
+      <span class="value">{{ (resumen.deudaTotal / (resumen.clientesMorosos || 1)) | moneda }}</span>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-panel glass">
+    <div class="filtros-grid">
+      <div class="filtro-group">
+        <label><i class="fas fa-search"></i> Buscar Doctor</label>
+        <input type="text" [(ngModel)]="filtroDoctor" (input)="aplicarFiltros()" placeholder="Nombre del doctor..." class="form-control">
+      </div>
+      <div class="filtro-group">
+        <label><i class="fas fa-calendar-week"></i> Días de Mora</label>
+        <select [(ngModel)]="filtroDiasMora" (change)="aplicarFiltros()" class="form-control">
+          <option value="todos">Todos</option>
+          <option value="critico">Crítico (&gt;30 días)</option>
+          <option value="moderado">Moderado (15-30 días)</option>
+          <option value="leve">Leve (&lt;15 días)</option>
+        </select>
+      </div>
+      <div class="filtro-actions">
+        <button class="btn-clear" (click)="limpiarFiltros()">
+          <i class="fas fa-eraser"></i> Limpiar filtros
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de deudas -->
+  <div class="tabla-card glass">
+    <div class="tabla-header">
+      <h3><i class="fas fa-file-invoice-dollar"></i> Detalle de Deudas Pendientes</h3>
+      
+      <!-- Selector de cantidad por página -->
+      <div class="items-per-page">
+        <span>Mostrar:</span>
+        <select [(ngModel)]="itemsPerPage" (change)="cambiarItemsPorPagina()" class="per-page-select">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+        </select>
+        <span>por página</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="reporte-table">
+        <thead>
+          <tr>
+            <th>Doctor</th>
+            <th>Contacto</th>
+            <th>Órdenes</th>
+            <th>Deuda Total</th>
+            <th>Vencidas</th>
+            <th>Días de Mora</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of deudaPaginada">
+            <td class="doctor-cell">
+              <strong>{{ item.doctor }}</strong>
+            </td>
+            <td>
+              <div *ngIf="item.telefono" class="contacto-info">
+                <i class="fab fa-whatsapp whatsapp-icon"></i>
+                <a [href]="'https://wa.me/' + item.telefono" target="_blank" class="whatsapp-link">
+                  {{ item.telefono }}
+                </a>
+              </div>
+              <span *ngIf="!item.telefono" class="sin-contacto">-</span>
+            </td>
+            <td class="numero">{{ item.ordenes }}</td>
+            <td class="monto deuda-positiva">{{ item.deuda | moneda }}</td>
+            <td class="numero">{{ item.vencidas }}</td>
+            <td class="dias-mora" [class]="getDiasMoraClass(item.diasMora)">
+              <span class="dias-badge">{{ item.diasMora }} días</span>
+            </td>
+            <td>
+              <button class="btn-icon" [routerLink]="['/doctores', item.doctorId]" title="Ver doctor">
+                <i class="fas fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="deudaPaginada.length === 0">
+            <td colspan="7" class="empty-row">No hay deudas que coincidan con los filtros</td>
+          </tr>
+        </tbody>
+        <!-- Reemplaza el tfoot completo -->
+<tfoot *ngIf="deudaFiltrada.length > 0">
+  <tr class="total-row">
+    <th colspan="2">Totales</th>
+    <th class="numero">{{ deudaFiltrada.length }}</th>
+    <th class="monto" [ngClass]="{'deuda-positiva': totalDeudaFiltrada > 0, 'deuda-cero': totalDeudaFiltrada === 0}">
+      {{ totalDeudaFiltrada | moneda }}
+    </th>
+    <th class="numero">{{ totalVencidasFiltradas }}</th>
+    <th colspan="2"></th>
+  </tr>
+</tfoot>
+      </table>
+    </div>
+
+    <!-- Información de registros mostrados -->
+    <div class="pagination-info-text" *ngIf="deudaFiltrada.length > 0">
+      Mostrando <strong>{{ inicioMostrando }}</strong> - <strong>{{ finMostrando }}</strong> de <strong>{{ deudaFiltrada.length }}</strong> registros
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination-wrapper" *ngIf="totalPaginas > 1">
+      <div class="pagination-simple">
+        <button class="pagination-nav-btn" (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1">
+          <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+        
+        <div class="pagination-numbers">
+          <button *ngFor="let page of paginationPages" 
+            class="pagination-number"
+            [class.active]="page === paginaActual"
+            [class.dots]="page === '...'"
+            (click)="page !== '...' && cambiarPagina(+page)"
+            [disabled]="page === '...'">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button class="pagination-nav-btn" (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas">
+          Siguiente <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="loading-container">
+    <app-loading-spinner></app-loading-spinner>
+  </div>
+</div>

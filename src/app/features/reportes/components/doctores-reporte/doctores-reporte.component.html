@@ -1,0 +1,207 @@
+<div class="reporte-container">
+  <div class="header">
+    <h1><i class="fas fa-user-doctor"></i> Reporte por Doctor</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportarExcel()">
+        <i class="fas fa-file-excel"></i> Exportar Excel
+      </button>
+      <button class="btn-secondary" routerLink="/reportes">
+        <i class="fas fa-arrow-left"></i> Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas de resumen -->
+  <div class="resumen-card glass">
+    <div class="resumen-stats">
+      <div class="stat">
+        <span class="label"><i class="fas fa-users"></i> Total Doctores</span>
+        <span class="value">{{ totalDoctores }}</span>
+      </div>
+      <div class="stat">
+        <span class="label"><i class="fas fa-chart-line"></i> Total Facturado</span>
+        <span class="value facturado">{{ totalFacturado | moneda }}</span>
+      </div>
+      <div class="stat">
+        <span class="label"><i class="fas fa-dollar-sign"></i> Total Pagado</span>
+        <span class="value pagado">{{ totalPagado | moneda }}</span>
+      </div>
+      <div class="stat">
+        <span class="label"><i class="fas fa-exclamation-triangle"></i> Deuda Total</span>
+       <span class="value" [ngClass]="{'deuda-positiva': deudaTotal > 0, 'deuda-cero': deudaTotal === 0}">
+        {{ deudaTotal | moneda }}
+      </span>
+      </div>
+      <div class="stat">
+        <span class="label"><i class="fas fa-clock"></i> Órdenes Pendientes</span>
+        <span class="value">{{ totalPendientes }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros-panel glass">
+    <div class="filtros-grid">
+      <div class="filtro-group">
+        <label><i class="fas fa-search"></i> Buscar Doctor</label>
+        <input type="text" [(ngModel)]="filtroNombre" (input)="aplicarFiltros()" placeholder="Nombre del doctor..." class="form-control">
+      </div>
+      <div class="filtro-group">
+        <label><i class="fas fa-filter"></i> Estado de Deuda</label>
+        <select [(ngModel)]="filtroDeuda" (change)="aplicarFiltros()" class="form-control">
+          <option value="todos">Todos los doctores</option>
+          <option value="conDeuda">Con deuda pendiente</option>
+          <option value="sinDeuda">Sin deuda (pagado)</option>
+        </select>
+      </div>
+      <div class="filtro-actions">
+        <button class="btn-clear" (click)="limpiarFiltros()">
+          <i class="fas fa-eraser"></i> Limpiar filtros
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de rendimiento -->
+  <div class="tabla-card glass">
+    <div class="tabla-header">
+      <h3><i class="fas fa-chart-simple"></i> Rendimiento por Doctor</h3>
+      
+      <!-- Selector de cantidad por página -->
+      <div class="items-per-page">
+        <span>Mostrar:</span>
+        <select [(ngModel)]="itemsPerPage" (change)="cambiarItemsPorPagina()" class="per-page-select">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+        </select>
+        <span>por página</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="reporte-table">
+        <thead>
+          <tr>
+            <th>Doctor</th>
+            <th>Contacto</th>
+            <th>Total Órdenes</th>
+            <th>Pendientes</th>
+            <th>Vencidas</th>
+            <th>Total Facturado</th>
+            <th>Total Pagado</th>
+            <th>Deuda Actual</th>
+            <th>Próxima Entrega</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let doctor of doctoresPaginados" [ngClass]="{'fila-pagado': doctor.deuda_total === 0}">
+           <!-- Cambia esto: -->
+            <td class="doctor-cell">
+              <div class="doctor-info">
+                <span class="doctor-nombre">{{ doctor.doctor}}</span>  <!-- ✅ Asegúrate que sea doctor.nombre -->
+              </div>
+            </td>
+            <td>
+              <div *ngIf="doctor.telefono_whatsapp" class="contacto-info">
+                <i class="fab fa-whatsapp whatsapp-icon"></i>
+                <a [href]="'https://wa.me/' + doctor.telefono_whatsapp" target="_blank" class="whatsapp-link">
+                  {{ doctor.telefono_whatsapp }}
+                </a>
+              </div>
+              <span *ngIf="!doctor.telefono_whatsapp" class="sin-contacto">-</span>
+            </td>
+            <td class="numero">{{ doctor.total_ordenes }}</td>
+            <td class="numero">{{ doctor.ordenes_pendientes }}</td>
+            <td class="numero" [ngClass]="{'vencidas-positivo': doctor.ordenes_vencidas > 0}">
+              {{ doctor.ordenes_vencidas }}
+            </td>
+            <td class="monto">{{ doctor.total_facturado | moneda }}</td>
+            <td class="monto">{{ doctor.total_pagado | moneda }}</td>
+            <td class="monto" [ngClass]="{'deuda-positiva': doctor.deuda_total > 0, 'deuda-cero': doctor.deuda_total === 0}">
+              {{ doctor.deuda_total | moneda }}
+            </td>
+            <td class="fecha">{{ doctor.proxima_entrega | fecha }}</td>
+            <td>
+              <button class="btn-icon" [routerLink]="['/doctores', doctor.doctorId]" title="Ver doctor">
+                <i class="fas fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="doctoresPaginados.length === 0">
+            <td colspan="10" class="empty-row">No hay doctores que coincidan con los filtros</td>
+          </tr>
+        </tbody>
+      <tfoot *ngIf="doctoresFiltrados.length > 0">
+  <tr class="total-row">
+    <th colspan="5">Totales</th>
+    <th class="monto">{{ totalFacturado | moneda }}</th>
+    <th class="monto">{{ totalPagado | moneda }}</th>
+    <th class="monto" [ngClass]="{'deuda-positiva': deudaTotal > 0, 'deuda-cero': deudaTotal === 0}">
+      {{ deudaTotal | moneda }}
+    </th>
+    <th colspan="2"></th>
+  </tr>
+</tfoot>
+      </table>
+    </div>
+
+    <!-- Información de registros mostrados -->
+    <div class="pagination-info-text" *ngIf="doctoresFiltrados.length > 0">
+      Mostrando <strong>{{ inicioMostrando }}</strong> - <strong>{{ finMostrando }}</strong> de <strong>{{ doctoresFiltrados.length }}</strong> doctores
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination-wrapper" *ngIf="totalPaginas > 1">
+      <div class="pagination-simple">
+        <button class="pagination-nav-btn" (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1">
+          <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+        
+        <div class="pagination-numbers">
+          <button *ngFor="let page of paginationPages" 
+            class="pagination-number"
+            [class.active]="page === paginaActual"
+            [class.dots]="page === '...'"
+            (click)="page !== '...' && cambiarPagina(+page)"
+            [disabled]="page === '...'">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button class="pagination-nav-btn" (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas">
+          Siguiente <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rankings -->
+  <div class="ranking-grid">
+    <div class="ranking-card glass">
+      <h3><i class="fas fa-trophy" style="color: #fbbf24;"></i> Top 5 - Más Órdenes</h3>
+      <div *ngFor="let doctor of topDoctores; let i = index" class="ranking-item">
+        <span class="posicion" [class.oro]="i===0" [class.plata]="i===1" [class.bronce]="i===2">{{ i + 1 }}</span>
+        <span class="nombre">{{ doctor.nombre }}</span>
+        <span class="valor">{{ doctor.total_ordenes }} órdenes</span>
+      </div>
+    </div>
+
+   <div class="ranking-card glass">
+  <h3><i class="fas fa-exclamation-triangle" style="color: #f43f5e;"></i> Top 5 - Mayor Deuda</h3>
+  <div *ngFor="let doctor of topDeudores; let i = index" class="ranking-item">
+    <span class="posicion">{{ i + 1 }}</span>
+    <span class="nombre">{{ doctor.nombre }}</span>
+    <span class="valor" [ngClass]="{'deuda-positiva': doctor.deuda_total > 0, 'deuda-cero': doctor.deuda_total === 0}">
+      {{ doctor.deuda_total | moneda }}
+    </span>
+  </div>
+</div>
+  </div>
+
+  <div *ngIf="cargando" class="loading-container">
+    <app-loading-spinner></app-loading-spinner>
+  </div>
+</div>

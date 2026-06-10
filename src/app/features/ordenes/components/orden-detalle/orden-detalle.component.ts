@@ -1,0 +1,607 @@
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { OrdenService } from '../../../../core/services/orden.service';
+import { PagoService } from '../../../../core/services/pago.service';
+import { TicketService } from '../../../../core/services/ticket.service';
+import { MonedaPipe } from '../../../../shared/pipes/moneda.pipe';
+import { FechaPipe } from '../../../../shared/pipes/fecha.pipe';
+import { HoraPipe } from '../../../../shared/pipes/hora.pipe';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import Swal from 'sweetalert2';
+import { ImagenPipe } from '../../../../shared/pipes/imagen.pipe';
+import { WhatsAppService } from '../../../../core/services/whatsapp.service';
+import { ImageZoomComponent } from '../../../../shared/components/image-zoom/image-zoom.component';
+import { ServicioService } from '../../../../core/services/servicio.service';
+
+@Component({
+  selector: 'app-orden-detalle',
+  standalone: true,
+  imports: [
+    CommonModule, 
+    RouterModule, 
+    MonedaPipe, 
+    FechaPipe, 
+    LoadingSpinnerComponent, 
+    ImagenPipe, 
+    HoraPipe,
+    ImageZoomComponent
+  ],
+  templateUrl: './orden-detalle.component.html',
+  styleUrls: ['./orden-detalle.component.css'],
+  providers: [MonedaPipe]
+})
+export class OrdenDetalleComponent implements OnInit, OnDestroy {
+  orden: any;
+  cargando = true;
+  totalPagado = 0;
+  saldo = 0;
+  // orden-detalle.component.ts - Agregar después de fechaServidorHoy
+
+fechaServidorHoy: string = '';
+fechaHoraServidor: string = '';  // NUEVO
+fechaHoraTimestamp: number = 0;   // NUEVO
+  subiendoImagen = false;
+  private subscriptions: Subscription[] = [];
+  
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
+  constructor(
+    private route: ActivatedRoute,
+    private ordenService: OrdenService,
+    private pagoService: PagoService,
+    private ticketService: TicketService,
+    private monedaPipe: MonedaPipe,
+    private whatsAppService: WhatsAppService,
+    private servicioService: ServicioService
+  ) {}
+
+// orden-detalle.component.ts - Modificar ngOnInit
+
+ngOnInit() {
+  // Primero obtener la fecha y hora del servidor
+  this.subscriptions.push(
+    this.ordenService.getFechaHoraServidor().subscribe({
+      next: (fechaHoraRespuesta) => {
+        this.fechaServidorHoy = fechaHoraRespuesta.fecha;
+        this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
+        this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
+        console.log('📅 Detalle - Fecha/Hora servidor:', this.fechaHoraServidor);
+        this.cargarOrdenDesdeParams();
+      },
+      error: (error) => {
+        console.error('Error obteniendo fecha/hora del servidor:', error);
+        const ahora = new Date();
+        this.fechaServidorHoy = ahora.toISOString().split('T')[0];
+        this.fechaHoraServidor = ahora.toISOString();
+        this.fechaHoraTimestamp = ahora.getTime();
+        console.log('📅 Detalle - Usando fecha local:', this.fechaServidorHoy);
+        this.cargarOrdenDesdeParams();
+      }
+    })
+  );
+}
+
+  private cargarOrdenDesdeParams() {
+    this.subscriptions.push(
+      this.route.params.subscribe(params => {
+        if (params['id']) {
+          this.cargarOrden(params['id']);
+        }
+      })
+    );
+  }
+
+  cargarOrden(id: number) {
+    this.cargando = true;
+    this.subscriptions.push(
+      this.ordenService.getOrden(id).subscribe({
+        next: (data) => {
+          this.orden = data;
+          this.calcularPagos();
+          this.cargando = false;
+        },
+        error: (error) => {
+          console.error('Error cargando orden:', error);
+          this.cargando = false;
+          Swal.fire('Error', 'No se pudo cargar la orden', 'error');
+        }
+      })
+    );
+  }
+
+// orden-detalle.component.ts - Reemplazar el método isVencida
+
+// orden-detalle.component.ts - Reemplazar isVencida
+
+isVencida(): boolean {
+  if (!this.orden?.fecha_limite || this.orden.estado === 'terminado') return false;
+  const saldo = this.saldo;
+  if (saldo <= 0) return false;
+  
+  // ✅ Usar timestamp del servidor
+  let ahora: Date;
+  if (this.fechaHoraTimestamp > 0) {
+    ahora = new Date(this.fechaHoraTimestamp);
+  } else {
+    ahora = new Date();
+  }
+  
+  // ✅ Construir fecha límite completa
+  const [yearL, monthL, dayL] = this.orden.fecha_limite.split('-').map(Number);
+  let hora = 23, minutos = 59, segundos = 59;
+  
+  if (this.orden.hora_limite) {
+    const horaParts = this.orden.hora_limite.split(':');
+    hora = parseInt(horaParts[0]);
+    minutos = parseInt(horaParts[1]);
+    segundos = 0;
+  }
+  
+  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
+  
+  // ✅ Comparar timestamps
+  const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
+  
+  console.log(`📅 Orden #${this.orden.id}:`, {
+    ahora: ahora.toLocaleString('es-PE'),
+    fechaLimite: fechaLimiteCompleta.toLocaleString('es-PE'),
+    diferenciaMinutos: Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000),
+    esVencida
+  });
+  
+  return esVencida;
+}
+
+  calcularPagos() {
+    if (this.orden?.pagos) {
+      this.totalPagado = Number(this.orden.pagos.reduce((sum: number, p: any) => sum + Number(p.monto), 0)) || 0;
+      this.saldo = Number(Number(this.orden.total) - this.totalPagado) || 0;
+    }
+  }
+
+  // Método para abrir selector de archivos (con soporte para cámara y galería)
+  abrirSelectorImagen() {
+    if (!this.orden?.servicio?.id) {
+      Swal.fire('Error', 'No se pudo identificar el servicio', 'error');
+      return;
+    }
+    
+    // Usar el input oculto en lugar de crear uno dinámico
+    if (this.fileInput) {
+      this.fileInput.nativeElement.click();
+    }
+  }
+
+  // Método para cuando se selecciona un archivo
+// Actualiza onImagenSeleccionada para usar el nuevo método
+onImagenSeleccionada(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+        this.subirImagenReferencia(input.files[0]);
+        input.value = '';
+    }
+}
+
+  // Subir imagen del servicio
+// Reemplaza el método subirImagenReferencia con esta versión mejorada
+subirImagenReferencia(file: File) {
+    // Mostrar información del archivo para depuración
+    console.log('📁 Archivo seleccionado para orden:', {
+        nombre: file.name,
+        tamaño: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+        tipo: file.type
+    });
+    
+    // Validar tamaño - 15MB (15000 * 1024 = 15,728,640 bytes)
+    const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+    if (file.size > MAX_SIZE) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Imagen muy grande',
+            text: `La imagen no puede superar los 15MB. Actualmente pesa ${(file.size / 1024 / 1024).toFixed(2)}MB. Por favor, comprime la imagen o usa una más pequeña.`,
+            confirmButtonColor: '#f43f5e'
+        });
+        return;
+    }
+    
+    // Validar tipo - soporte para formatos comunes y HEIC/HEIF (iPhone)
+    const allowedTypes = [
+        'image/jpeg', 
+        'image/jpg', 
+        'image/png', 
+        'image/gif', 
+        'image/webp',
+        'image/avif',
+        'image/heic',
+        'image/heif'
+    ];
+    
+    // También validar por extensión
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif'];
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension || '')) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Formato no soportado',
+            text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, AVIF, HEIC',
+            confirmButtonColor: '#f43f5e'
+        });
+        return;
+    }
+
+    this.subiendoImagen = true;
+
+    const formData = new FormData();
+    formData.append('imagen', file);
+
+    this.subscriptions.push(
+        this.ordenService.actualizarImagenReferencia(this.orden.id, formData).subscribe({
+            next: (response) => {
+                this.subiendoImagen = false;
+                this.orden.imagen_referencia_url = response.imagen_url;
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Imagen actualizada!',
+                    text: 'La imagen de referencia para esta orden se ha actualizado correctamente',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            },
+            error: (error) => {
+                this.subiendoImagen = false;
+                console.error('❌ Error subiendo imagen:', error);
+                
+                // Mostrar mensaje de error más específico
+                let mensajeError = 'No se pudo subir la imagen.';
+                if (error.error && error.error.error) {
+                    mensajeError = error.error.error;
+                } else if (error.message) {
+                    mensajeError = error.message;
+                }
+                
+                // Si el error es sobre el tamaño de la imagen
+                if (mensajeError.toLowerCase().includes('tamaño') || 
+                    mensajeError.toLowerCase().includes('size') ||
+                    mensajeError.toLowerCase().includes('large')) {
+                    mensajeError = 'La imagen es demasiado grande. Máximo 15MB permitido.';
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensajeError,
+                    confirmButtonColor: '#f43f5e'
+                });
+            }
+        })
+    );
+}
+
+  // Métodos de acciones (mantener los existentes)
+  enviarWhatsApp() {
+    this.whatsAppService.enviarMensajePersonalizado({
+      telefono: this.orden?.doctor?.telefono_whatsapp,
+      nombre: this.orden?.doctor?.nombre,
+      tipo: 'orden',
+      datos: this.orden
+    });
+  }
+
+  vistaPreviaTicket() {
+    this.ticketService.abrirVistaPrevia(this.orden);
+  }
+
+  descargarTicket() {
+    Swal.fire({
+      title: 'Descargando ticket...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+    
+    this.ticketService.descargarTicketPDF(this.orden)
+      .then(() => {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Descargado!',
+          text: 'El PDF se ha guardado correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      })
+      .catch(error => {
+        console.error(error);
+        Swal.fire('Error', 'No se pudo descargar el ticket', 'error');
+      });
+  }
+
+  agregarPago() {
+    const saldoActual = this.saldo;
+    
+    if (saldoActual <= 0) {
+      Swal.fire('Info', 'Esta orden ya está pagada', 'info');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Registrar Pago',
+      html: `
+        <input type="number" id="monto" class="swal2-input" 
+               placeholder="Monto (S/)" step="0.01" min="0.01" 
+               max="${saldoActual}" value="${saldoActual.toFixed(2)}">
+        <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
+          <option value="efectivo">Efectivo</option>
+          <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="yape">Yape</option>
+          <option value="plin">Plin</option>
+        </select>
+        <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
+        <div class="swal2-text" style="font-size:0.9rem; color:#64748b; margin-top:10px;">
+          Saldo pendiente: ${this.monedaPipe.transform(saldoActual)}
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Registrar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const monto = (document.getElementById('monto') as HTMLInputElement).value;
+        const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
+        const referencia = (document.getElementById('referencia') as HTMLInputElement).value;
+        
+        if (!monto || monto.trim() === '') {
+          Swal.showValidationMessage('Ingrese un monto');
+          return false;
+        }
+        
+        const montoNumerico = parseFloat(monto);
+        
+        if (isNaN(montoNumerico) || montoNumerico <= 0) {
+          Swal.showValidationMessage('Ingrese un monto válido mayor a 0');
+          return false;
+        }
+        
+        if (montoNumerico > saldoActual) {
+          Swal.showValidationMessage(`El monto no puede exceder el saldo pendiente (${this.monedaPipe.transform(saldoActual)})`);
+          return false;
+        }
+        
+        return { monto: montoNumerico, metodo_pago: metodo, referencia };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // ✅ LOG: Verificar el orden_id antes de enviar
+        const ordenId = this.orden.id;
+        console.log('📝 [DEBUG] Enviando pago con orden_id:', ordenId, 'tipo:', typeof ordenId);
+        console.log('📝 [DEBUG] Datos del pago:', {
+          orden_id: ordenId,
+          monto: result.value.monto,
+          metodo_pago: result.value.metodo_pago,
+          referencia: result.value.referencia
+        });
+        
+        this.subscriptions.push(
+          this.pagoService.registrarPago({
+            orden_id: Number(ordenId), // ✅ Asegurar que sea número
+            monto: result.value.monto,
+            metodo_pago: result.value.metodo_pago,
+            referencia: result.value.referencia
+          }).subscribe({
+            next: (response) => {
+              console.log('✅ [DEBUG] Pago registrado exitosamente:', response);
+              Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Pago registrado correctamente',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              this.cargarOrden(this.orden.id);
+            },
+            error: (error) => {
+              console.error('❌ [DEBUG] Error registrando pago:', error);
+              console.error('❌ [DEBUG] Detalles del error:', {
+                status: error.status,
+                message: error.message,
+                error: error.error
+              });
+              if (error.error && error.error.error) {
+                Swal.fire('Error', error.error.error, 'error');
+              } else {
+                Swal.fire('Error', 'No se pudo registrar el pago', 'error');
+              }
+            }
+          })
+        );
+      }
+    });
+  }
+
+  editarPago(pago: any) {
+    const saldoActual = Number(this.saldo) + Number(pago.monto);
+
+    Swal.fire({
+      title: 'Editar Pago',
+      html: `
+        <input type="number" id="monto" class="swal2-input" 
+               value="${pago.monto}" step="0.01" min="0.01" 
+               max="${saldoActual}" placeholder="Monto (S/)">
+        <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
+          <option value="efectivo" ${pago.metodo_pago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
+          <option value="tarjeta" ${pago.metodo_pago === 'tarjeta' ? 'selected' : ''}>Tarjeta</option>
+          <option value="transferencia" ${pago.metodo_pago === 'transferencia' ? 'selected' : ''}>Transferencia</option>
+          <option value="yape" ${pago.metodo_pago === 'yape' ? 'selected' : ''}>Yape</option>
+          <option value="plin" ${pago.metodo_pago === 'plin' ? 'selected' : ''}>Plin</option>
+        </select>
+        <input type="text" id="referencia" class="swal2-input" 
+               value="${pago.referencia || ''}" placeholder="Referencia (opcional)">
+        <div class="swal2-text" style="font-size:0.9rem; color:#64748b; margin-top:10px;">
+          Monto máximo permitido: ${this.monedaPipe.transform(saldoActual)}
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Actualizar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const monto = (document.getElementById('monto') as HTMLInputElement).value;
+        const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
+        const referencia = (document.getElementById('referencia') as HTMLInputElement).value;
+        
+        if (!monto || monto.trim() === '') {
+          Swal.showValidationMessage('Ingrese un monto');
+          return false;
+        }
+        
+        const montoNumerico = parseFloat(monto);
+        
+        if (isNaN(montoNumerico) || montoNumerico <= 0) {
+          Swal.showValidationMessage('Ingrese un monto válido mayor a 0');
+          return false;
+        }
+        
+        if (montoNumerico > saldoActual) {
+          Swal.showValidationMessage(`El monto no puede exceder el saldo actual (${this.monedaPipe.transform(saldoActual)})`);
+          return false;
+        }
+        
+        return { id: pago.id, monto: montoNumerico, metodo_pago: metodo, referencia };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.subscriptions.push(
+          this.pagoService.actualizarPago(result.value.id, {
+            monto: result.value.monto,
+            metodo_pago: result.value.metodo_pago,
+            referencia: result.value.referencia
+          }).subscribe({
+            next: () => {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Pago actualizado correctamente',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              this.cargarOrden(this.orden.id);
+            },
+            error: (error) => {
+              console.error('Error actualizando pago:', error);
+              if (error.error && error.error.error) {
+                Swal.fire('Error', error.error.error, 'error');
+              } else {
+                Swal.fire('Error', 'No se pudo actualizar el pago', 'error');
+              }
+            }
+          })
+        );
+      }
+    });
+  }
+
+  eliminarPago(pagoId: number) {
+    Swal.fire({
+      title: '¿Eliminar pago?',
+      text: 'Esta acción no se puede deshacer',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.subscriptions.push(
+          this.pagoService.eliminarPago(pagoId).subscribe({
+            next: () => {
+              Swal.fire('¡Eliminado!', 'Pago eliminado correctamente', 'success');
+              this.cargarOrden(this.orden.id);
+            },
+            error: (error) => {
+              console.error('Error eliminando pago:', error);
+              Swal.fire('Error', 'No se pudo eliminar el pago', 'error');
+            }
+          })
+        );
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => {
+      if (sub && typeof sub.unsubscribe === 'function') {
+        sub.unsubscribe();
+      }
+    });
+    console.log('🧹 OrdenDetalleComponent destruido');
+  }
+// Agregar este método a OrdenDetalleComponent
+editarDetalleCliente() {
+    Swal.fire({
+        title: 'Editar Detalle del Cliente',
+        html: `
+            <div style="text-align: left;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
+                <input id="cliente-nombre" class="swal2-input" 
+                       value="${this.orden.cliente_nombre || ''}" 
+                       placeholder="Nombre del paciente"
+                       style="margin-bottom: 16px;">
+                
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
+                <textarea id="detalle-cliente" class="swal2-textarea" 
+                          rows="5" 
+                          placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${this.orden.detalle_cliente || ''}</textarea>
+                
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+                    <i class="fas fa-info-circle"></i> Incluya información relevante como:
+                    pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar cambios',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const clienteNombre = (document.getElementById('cliente-nombre') as HTMLInputElement).value;
+            const detalleCliente = (document.getElementById('detalle-cliente') as HTMLTextAreaElement).value;
+            
+            if (!clienteNombre.trim()) {
+                Swal.showValidationMessage('El nombre del cliente es requerido');
+                return false;
+            }
+            
+            return { cliente_nombre: clienteNombre, detalle_cliente: detalleCliente };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            this.subscriptions.push(
+                this.ordenService.actualizarOrden(this.orden.id, {
+                    cliente_nombre: result.value.cliente_nombre,
+                    detalle_cliente: result.value.detalle_cliente
+                }).subscribe({
+                    next: () => {
+                        this.orden.cliente_nombre = result.value.cliente_nombre;
+                        this.orden.detalle_cliente = result.value.detalle_cliente;
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Actualizado',
+                            text: 'La información del cliente se ha actualizado correctamente',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    },
+                    error: (error) => {
+                        console.error('Error actualizando cliente:', error);
+                        Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+                    }
+                })
+            );
+        }
+    });
+}
+
+
+
+
+
+}

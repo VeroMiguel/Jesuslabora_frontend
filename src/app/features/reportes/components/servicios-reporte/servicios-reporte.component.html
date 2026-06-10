@@ -1,0 +1,108 @@
+<div class="reporte-container">
+  <div class="header">
+    <h1><i class="fas fa-tooth"></i> Reporte por Servicio</h1>
+    <div class="header-actions">
+      <button class="btn-export" (click)="exportarExcel()">
+        <i class="fas fa-file-excel"></i> Exportar Excel
+      </button>
+      <button class="btn-secondary" routerLink="/reportes">
+        <i class="fas fa-arrow-left"></i> Volver
+      </button>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card glass">
+      <h3>Servicios más solicitados</h3>
+      <canvas id="serviciosChart"></canvas>
+    </div>
+    <div class="chart-card glass">
+      <h3>Ingresos por Servicio</h3>
+      <canvas id="ingresosChart"></canvas>
+    </div>
+  </div>
+
+  <div class="tabla-card glass">
+    <h3>Detalle por Servicio</h3>
+    
+    <!-- Selector de cantidad por página -->
+    <div class="table-controls">
+      <div class="items-per-page">
+        <span>Mostrar:</span>
+        <select [(ngModel)]="itemsPerPage" (change)="cambiarItemsPorPagina()" class="per-page-select">
+          <option [value]="5">5</option>
+          <option [value]="10">10</option>
+          <option [value]="20">20</option>
+          <option [value]="50">50</option>
+        </select>
+        <span>por página</span>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="reporte-table">
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th>Cantidad</th>
+            <th>Total Facturado</th>
+            <th>Precio Promedio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let servicio of serviciosPaginados">
+            <td class="servicio-nombre" [title]="servicio.nombre">{{ servicio.nombre }}</td>
+            <td class="numero">{{ servicio.cantidad }}</td>
+            <td class="monto">{{ servicio.total_facturado | moneda }}</td>
+            <td class="monto">{{ servicio.precio_promedio | moneda }}</td>
+          </tr>
+          <tr *ngIf="serviciosPaginados.length === 0">
+            <td colspan="4" class="empty-row">No hay datos para mostrar</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Información de registros mostrados -->
+    <div class="pagination-info-text">
+      Mostrando <strong>{{ inicioMostrando }}</strong> - <strong>{{ finMostrando }}</strong> de <strong>{{ servicios.length }}</strong> registros
+    </div>
+
+    <!-- Paginación mejorada -->
+    <div class="pagination-wrapper">
+      <div class="pagination-simple">
+        <button 
+          class="pagination-nav-btn" 
+          (click)="cambiarPagina(paginaActual - 1)" 
+          [disabled]="paginaActual === 1"
+          title="Página anterior">
+          <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+        
+        <div class="pagination-numbers">
+          <button 
+            *ngFor="let page of paginationPages" 
+            class="pagination-number"
+            [class.active]="page === paginaActual"
+            [class.dots]="page === '...'"
+            (click)="page !== '...' && cambiarPagina(+page)"
+            [disabled]="page === '...'">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          class="pagination-nav-btn" 
+          (click)="cambiarPagina(paginaActual + 1)" 
+          [disabled]="paginaActual === totalPaginas"
+          title="Página siguiente">
+          Siguiente <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="cargando" class="loading-container">
+    <app-loading-spinner></app-loading-spinner>
+  </div>
+</div>
