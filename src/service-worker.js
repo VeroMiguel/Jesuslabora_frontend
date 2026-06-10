@@ -6,19 +6,19 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'labdemitrio-v3';
+const CACHE_NAME = 'jesuslabora-v3';
 const APP_SHELL = ['/'];
 
 // ============================================
 // CONFIGURACIÓN DE FIREBASE
 // ============================================
 const firebaseConfig = {
-  apiKey: 'AIzaSyAYc_qACmyDhFtqVzN-OAfFHN0X2-QUSzE',
-  authDomain: 'labdemetrio-28c4d.firebaseapp.com',
-  projectId: 'labdemetrio-28c4d',
-  storageBucket: 'labdemetrio-28c4d.firebasestorage.app',
-  messagingSenderId: '195945779360',
-  appId: '1:195945779360:web:f3622d8b42639e854139c5'
+  apiKey: 'AIzaSyD52uK_xBXysS7bLkc65DLoHgKmhOayg7k',
+  authDomain: 'jesuslabora.firebaseapp.com',
+  projectId: 'jesuslabora',
+  storageBucket: 'jesuslabora.firebasestorage.app',
+  messagingSenderId: '986217821871',
+  appId: '1:986217821871:web:9309f4cbfc03b33319c65a'
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -43,7 +43,7 @@ messaging.onBackgroundMessage((payload) => {
   }
   ultimaNotificacion = notificacionId;
   
-  let titulo = payload.notification?.title || '📋 Lab.demetrio';
+  let titulo = payload.notification?.title || '📋 Lab.jesuslabora';
   let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
