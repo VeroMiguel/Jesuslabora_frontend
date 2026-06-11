@@ -11,10 +11,11 @@ import { ConfigService } from '../../../../core/services/config.service';
 import Swal from 'sweetalert2';
 import { SearchableSelectComponent } from '../../../../shared/components/searchable-select/searchable-select.component';
 import { environment } from '../../../../../environments/environment';
+import { MultiServicioSelectorComponent } from '../multi-servicio-selector/multi-servicio-selector.component'; // ← AGREGAR
 @Component({
   selector: 'app-orden-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SearchableSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SearchableSelectComponent, MultiServicioSelectorComponent], // ← AGREGAR MultiServicioSelectorComponent
   templateUrl: './orden-form.component.html',
   styleUrls: ['./orden-form.component.css']
 })
@@ -22,6 +23,7 @@ export class OrdenFormComponent implements OnInit {
   ordenForm: FormGroup;
   doctores: any[] = [];
   servicios: any[] = [];
+  detallesIniciales: any[] = [];
   esEdicion = false;
   ordenId?: number;
 
@@ -155,54 +157,50 @@ private setupServicioListener() {
 
 // orden-form.component.ts - Reemplazar el método cargarOrden()
 
-cargarOrden() {
-  if (!this.ordenId) return;
-  
-  this.ordenService.getOrden(this.ordenId).subscribe({
-    next: (orden) => {
-      const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
-      
-      // ✅ CORREGIDO: Manejo correcto de fechas sin desfase
-      let fechaLimiteFormateada = '';
-      if (orden.fecha_limite) {
-        // La fecha viene como YYYY-MM-DD del backend
-        // NO aplicar conversión de zona horaria, usarla directamente
-        fechaLimiteFormateada = orden.fecha_limite; // Ya viene en formato YYYY-MM-DD
+// MODIFICAR el método cargarOrden para incluir detalles
+  cargarOrden() {
+    if (!this.ordenId) return;
+    
+    this.ordenService.getOrden(this.ordenId).subscribe({
+      next: (orden) => {
+        const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
+        
+        // Cargar detalles existentes
+        if (orden.detalles && orden.detalles.length > 0) {
+          this.detallesIniciales = orden.detalles.map((det: any) => ({
+            id: det.id,
+            servicio_id: det.servicio_id,
+            servicio_nombre: det.servicio?.nombre,
+            cantidad: det.cantidad,
+            precio_unitario: det.precio_unitario,
+            subtotal: det.subtotal || (det.cantidad * det.precio_unitario),
+            fecha_limite: det.fecha_limite || '',
+            hora_limite: det.hora_limite || ''
+          }));
+        }
+        
+        this.ordenForm.patchValue({
+          doctor_id: orden.doctor_id,
+          total: orden.total,
+          pago_inicial: totalPagado,
+          prioridad: orden.prioridad,
+          cliente_nombre: orden.cliente_nombre,
+          detalle_cliente: orden.detalle_cliente
+        });
+        
+        if (orden.imagen_referencia_url) {
+          const imagenesUrl = environment.baseUrl.replace(/\/+$/, '');
+          this.previewUrl = `${imagenesUrl}${orden.imagen_referencia_url}`;
+        }
+        
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Error cargando orden:', error);
+        Swal.fire('Error', 'No se pudo cargar la orden', 'error');
       }
-      
-      // ✅ Asegurar que hora_limite tenga formato HH:MM
-      let horaFormateada = orden.hora_limite || '';
-      if (horaFormateada && horaFormateada.includes(':')) {
-        // Si viene con segundos, solo tomar HH:MM
-        horaFormateada = horaFormateada.substring(0, 5);
-      }
-      
-      this.ordenForm.patchValue({
-        doctor_id: orden.doctor_id,
-        servicio_id: orden.servicio_id,
-        total: orden.total,
-        pago_inicial: totalPagado,
-        prioridad: orden.prioridad,
-        fecha_limite: fechaLimiteFormateada,
-        hora_limite: horaFormateada,
-        cliente_nombre: orden.cliente_nombre,
-        detalle_cliente: orden.detalle_cliente
-      });
-
-      // Cargar la imagen de referencia existente
-      if (orden.imagen_referencia_url) {
-        const imagenesUrl = environment.baseUrl.replace(/\/+$/, '');
-        this.previewUrl = `${imagenesUrl}${orden.imagen_referencia_url}`;
-      }
-      
-      this.cdr.detectChanges();
-    },
-    error: (error) => {
-      console.error('Error cargando orden:', error);
-      Swal.fire('Error', 'No se pudo cargar la orden', 'error');
-    }
-  });
-}
+    });
+  }
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
@@ -277,9 +275,32 @@ cargarOrden() {
   // ✅ También modifica el método onSubmit para asegurar que la imagen se actualice correctamente
   // orden-form.component.ts - Reemplazar el método onSubmit() completo
 
-async onSubmit() {  // ✅ AGREGAR 'async' aquí
-  if (this.ordenForm.valid) {
-    const formValue = { ...this.ordenForm.value };
+  // MODIFICAR onSubmit para enviar detalles
+  async onSubmit() {
+    if (this.ordenForm.valid && this.detallesIniciales.length > 0) {
+      const formValue = { ...this.ordenForm.value };
+      
+      // Validar que haya al menos un detalle válido
+      const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
+      if (detallesValidos.length === 0) {
+        Swal.fire('Error', 'Debe agregar al menos un servicio válido', 'error');
+        return;
+      }
+      
+      const datosParaEnviar = {
+        doctor_id: formValue.doctor_id,
+        detalles: detallesValidos.map(d => ({
+          servicio_id: d.servicio_id,
+          cantidad: d.cantidad,
+          precio_unitario: d.precio_unitario,
+          fecha_limite: d.fecha_limite || null,
+          hora_limite: d.hora_limite || null
+        })),
+        pago_inicial: formValue.pago_inicial || 0,
+        prioridad: formValue.prioridad,
+        cliente_nombre: formValue.cliente_nombre || null,
+        detalle_cliente: formValue.detalle_cliente || null
+      };
     
     if (formValue.fecha_limite) {
       formValue.fecha_limite = this.formatearFechaParaBackend(formValue.fecha_limite);
@@ -511,4 +532,15 @@ private async reprogramarNotificaciones(ordenActualizada: any): Promise<void> {
     console.error('Error reprogramando notificaciones:', error);
   }
 }
+// NUEVO: Manejar cambios en detalles
+  onDetallesChange(detalles: any[]) {
+    this.detallesIniciales = detalles;
+  }
+  
+  onTotalChange(total: number) {
+    this.ordenForm.patchValue({ total: total });
+  }
+
+
+
 }

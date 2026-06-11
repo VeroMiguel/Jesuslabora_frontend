@@ -7,7 +7,7 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor.fn';
-
+import { FullCalendarModule } from '@fullcalendar/angular';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
@@ -15,6 +15,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([authInterceptor])
     ),
     provideAnimations(),
-    importProvidersFrom(MatDialogModule, MatSnackBarModule)
+    importProvidersFrom(MatDialogModule, MatSnackBarModule),
+     importProvidersFrom(FullCalendarModule)
   ]
 };

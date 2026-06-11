@@ -1,0 +1,66 @@
+<!-- calendario-filtro.component.html -->
+<div class="calendario-container">
+  <div class="calendario-header">
+    <div class="filtros-group">
+      <div class="filtro-item">
+        <label>👨‍⚕️ Doctor</label>
+        <app-searchable-select
+          [opciones]="doctores"
+          [(ngModel)]="doctorSeleccionado"
+          placeholder="Todos los doctores"
+          (selectionChange)="aplicarFiltros()"
+        ></app-searchable-select>
+      </div>
+      
+      <div class="filtro-item">
+        <label>📅 Mostrar</label>
+        <div class="radio-group">
+          <label class="radio-label" [class.active]="tipoFecha === 'limite'">
+            <input type="radio" value="limite" [(ngModel)]="tipoFecha" (change)="aplicarFiltros()">
+            <span>Fecha Límite</span>
+          </label>
+          <label class="radio-label" [class.active]="tipoFecha === 'registro'">
+            <input type="radio" value="registro" [(ngModel)]="tipoFecha" (change)="aplicarFiltros()">
+            <span>Fecha Registro</span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="filtro-item">
+        <label>📊 Estado</label>
+        <select class="form-control" [(ngModel)]="estadoSeleccionado" (change)="aplicarFiltros()">
+          <option value="todos">Todos</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="terminado">Terminados</option>
+        </select>
+      </div>
+      
+      <div class="filtro-actions">
+        <button class="btn-limpiar" (click)="limpiarFiltros()">
+          <i class="fas fa-eraser"></i> Limpiar
+        </button>
+      </div>
+    </div>
+    
+    <div class="leyenda">
+      <span class="leyenda-item"><span class="color-morado"></span> Normal</span>
+      <span class="leyenda-item"><span class="color-naranja"></span> Próximo a vencer</span>
+      <span class="leyenda-item"><span class="color-rojo"></span> Vencido</span>
+      <span class="leyenda-item"><span class="color-verde"></span> Terminado / Pagado</span>
+    </div>
+  </div>
+  
+  <div class="calendario-wrapper" *ngIf="!cargando; else loading">
+    <full-calendar
+      [options]="calendarOptions"
+      (click)="onDateClick($event)"
+    ></full-calendar>
+  </div>
+  
+  <ng-template #loading>
+    <div class="loading-calendario">
+      <i class="fas fa-spinner fa-spin"></i>
+      <span>Cargando calendario...</span>
+    </div>
+  </ng-template>
+</div>

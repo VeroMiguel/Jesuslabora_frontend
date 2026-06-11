@@ -19,7 +19,7 @@ import { TicketService } from '../../core/services/ticket.service';
 import { WhatsAppService } from '../../core/services/whatsapp.service';
 import { saveAs } from 'file-saver';
 import { HttpClient } from '@angular/common/http'; // <-- AGREGAR ESTO
-
+import { CalendarioFiltroComponent } from './components/calendario-filtro/calendario-filtro.component'; // ← AGREGAR
 @Component({
   selector: 'app-ordenes',
   standalone: true,
@@ -33,7 +33,8 @@ import { HttpClient } from '@angular/common/http'; // <-- AGREGAR ESTO
     HoraPipe,
     ImagenPipe,
     SearchableSelectComponent,
-     ImageZoomComponent
+     ImageZoomComponent,
+    CalendarioFiltroComponent  // ← AGREGAR AQUÍ
   ],
   templateUrl: './ordenes.component.html',
   styleUrls: ['./ordenes.component.css'],
@@ -842,5 +843,35 @@ getContadorVencidas(): number {
 
 getContadorTerminados(): number {
   return this.ordenes.filter(o => o.estado === 'terminado').length;
+}
+
+// ordenes.component.ts - AGREGAR ESTE MÉTODO
+
+aplicarFiltrosDesdeCalendario(filtros: any) {
+  // Aplicar filtros desde el calendario a la tabla
+  if (filtros.fecha_inicio && filtros.fecha_fin) {
+    // Si es una fecha específica, filtrar por esa fecha
+    this.filtros.fechaInicio = filtros.fecha_inicio;
+    this.filtros.fechaFin = filtros.fecha_fin;
+  }
+  
+  if (filtros.doctor_id) {
+    const doctor = this.doctoresCompleto.find(d => d.id == filtros.doctor_id);
+    if (doctor) {
+      this.filtros.doctor = doctor.nombre;
+    }
+  }
+  
+  if (filtros.estado && filtros.estado !== 'todos') {
+    this.setFiltroEstado(filtros.estado);
+  }
+  
+  // Aplicar los filtros
+  this.filtrarOrdenes();
+  
+  // Scroll suave hacia la tabla
+  setTimeout(() => {
+    document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
 }
 }

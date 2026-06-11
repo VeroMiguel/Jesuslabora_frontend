@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';  // ← AGREGAR HttpParams
 import { Observable, throwError, timer } from 'rxjs';
 import { retry, timeout, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+
 
 export interface Orden {
   id: number;
@@ -27,6 +28,16 @@ export interface Orden {
     metodo_pago: string;
     fecha_pago?: string;
     creado_en?: string;
+  }>;
+  detalles?: Array<{  // ← NUEVO: Agregar esta propiedad
+    id: number;
+    servicio_id: number;
+    servicio?: any;
+    cantidad: number;
+    precio_unitario: number;
+    subtotal: number;
+    fecha_limite?: string;
+    hora_limite?: string;
   }>;
 }
 
@@ -200,4 +211,35 @@ formatearFechaParaBackend(fecha: string): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+// orden.service.ts - AGREGAR ESTE MÉTODO
+
+getOrdenesConFiltros(filtros: {
+    doctor_id?: string | number;
+    fecha_inicio?: string;
+    fecha_fin?: string;
+    tipo_fecha?: 'registro' | 'limite';
+    estado?: string;
+}): Observable<any[]> {
+    let params = new HttpParams();
+    
+    if (filtros.doctor_id && filtros.doctor_id !== 'todos') {
+        params = params.set('doctor_id', filtros.doctor_id.toString());
+    }
+    if (filtros.fecha_inicio) params = params.set('fecha_inicio', filtros.fecha_inicio);
+    if (filtros.fecha_fin) params = params.set('fecha_fin', filtros.fecha_fin);
+    if (filtros.tipo_fecha) params = params.set('tipo_fecha', filtros.tipo_fecha);
+    if (filtros.estado) params = params.set('estado', filtros.estado);
+    
+    return this.http.get<any[]>(`${this.apiUrl}/filtros-avanzados`, { params }).pipe(
+        timeout(10000),
+        catchError(error => {
+            console.error('Error en getOrdenesConFiltros:', error);
+            return throwError(() => error);
+        })
+    );
+}
+
+
+
 }

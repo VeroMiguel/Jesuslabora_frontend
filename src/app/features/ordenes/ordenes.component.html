@@ -36,6 +36,17 @@
   </div>
 
 
+<!-- NUEVO: Calendario interactivo -->
+<app-calendario-filtro
+  [doctores]="doctoresCompleto"
+  (filtrosAplicados)="aplicarFiltrosDesdeCalendario($event)"
+></app-calendario-filtro>
+
+
+
+
+
+
   <!-- Barra de filtros mejorada -->
   <div class="filtros-bar">
     <div class="search-box">
