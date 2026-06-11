@@ -85,27 +85,27 @@ export class OrdenService {
     );
   }
 
-  // Crear nueva orden
-  crearOrden(orden: Partial<Orden>): Observable<any> {
-    return this.http.post(this.apiUrl, orden).pipe(
-      timeout(10000),
-      catchError(error => {
-        console.error('Error en crearOrden:', error);
-        return throwError(() => error);
-      })
-    );
-  }
+// Crear nueva orden (acepta cualquier objeto)
+crearOrden(orden: any): Observable<any> {
+  return this.http.post(this.apiUrl, orden).pipe(
+    timeout(10000),
+    catchError(error => {
+      console.error('Error en crearOrden:', error);
+      return throwError(() => error);
+    })
+  );
+}
 
-  // Actualizar orden
-  actualizarOrden(id: number, orden: Partial<Orden>): Observable<any> {
-    return this.http.put(`${this.apiUrl}/${id}`, orden).pipe(
-      timeout(10000),
-      catchError(error => {
-        console.error(`Error en actualizarOrden(${id}):`, error);
-        return throwError(() => error);
-      })
-    );
-  }
+// Actualizar orden (acepta cualquier objeto)
+actualizarOrden(id: number, orden: any): Observable<any> {
+  return this.http.put(`${this.apiUrl}/${id}`, orden).pipe(
+    timeout(10000),
+    catchError(error => {
+      console.error(`Error en actualizarOrden(${id}):`, error);
+      return throwError(() => error);
+    })
+  );
+}
 
   // Eliminar orden (soft delete)
   eliminarOrden(id: number): Observable<any> {

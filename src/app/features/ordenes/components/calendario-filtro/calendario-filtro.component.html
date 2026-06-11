@@ -50,17 +50,15 @@
     </div>
   </div>
   
-  <div class="calendario-wrapper" *ngIf="!cargando; else loading">
+  <div class="calendario-wrapper">
     <full-calendar
       [options]="calendarOptions"
       (click)="onDateClick($event)"
     ></full-calendar>
   </div>
   
-  <ng-template #loading>
-    <div class="loading-calendario">
-      <i class="fas fa-spinner fa-spin"></i>
-      <span>Cargando calendario...</span>
-    </div>
-  </ng-template>
+  <div *ngIf="cargando" class="loading-overlay">
+    <div class="spinner"></div>
+    <span>Cargando eventos...</span>
+  </div>
 </div>

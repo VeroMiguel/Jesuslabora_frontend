@@ -11,21 +11,28 @@
   </div>
 
   <div *ngIf="!cargando && orden" class="detalle-content">
-    <div class="info-card glass">
-      <div class="card-header">
-        <div class="doctor-info">
-          <img [src]="orden.doctor?.logo_url | imagen:'assets/images/default-doctor.png'" 
-               [alt]="orden.doctor?.nombre"
-               class="doctor-logo">
-          <div>
-            <h2>{{ orden.doctor?.nombre }}</h2>
-            <p class="servicio">{{ orden.servicio?.nombre }}</p>
+  <div class="info-card glass">
+  <div class="card-header">
+    <div class="doctor-info">
+      <img [src]="orden.doctor?.logo_url | imagen:'assets/images/default-doctor.png'" 
+           [alt]="orden.doctor?.nombre"
+           class="doctor-logo">
+      <div>
+        <h2>{{ orden.doctor?.nombre }}</h2>
+        <!-- ✅ Mostrar lista de servicios -->
+        <div class="servicios-lista">
+          <div *ngFor="let detalle of orden.detalles" class="servicio-detalle-item">
+            <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
+            <span class="servicio-cantidad">x{{ detalle.cantidad }}</span>
+            <span class="servicio-precio">{{ detalle.precio_unitario | moneda }}</span>
           </div>
         </div>
-        <span class="estado" [ngClass]="'estado-' + orden.estado">
-          {{ orden.estado | titlecase }}
-        </span>
       </div>
+    </div>
+    <span class="estado" [ngClass]="'estado-' + orden.estado">
+      {{ orden.estado | titlecase }}
+    </span>
+  </div>
 
       <!-- Sección de imagen de referencia de la ORDEN -->
       <div class="servicio-imagen-section">
@@ -73,35 +80,39 @@
     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif"
     (change)="onImagenSeleccionada($event)">
 
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="label">Orden #</span>
-          <span class="value">{{ orden.id_externo }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Fecha Registro</span>
-          <span class="value fecha-registro">
-            <span class="fecha">{{ orden.fecha_registro | fecha:'dd/MM/yyyy' }}</span>
-            <span class="hora-registro">{{ orden.fecha_registro | fecha:'h:mm a' }}</span>
-          </span>
-        </div>
-        <div class="info-item">
-          <span class="label">Fecha Límite</span>
-          <span class="value" [ngClass]="{'vencido': isVencida()}">
-            {{ orden.fecha_limite | fecha }}
-            <span class="hora-detalle" *ngIf="orden.hora_limite">
-              {{ orden.hora_limite | hora }}
-            </span>
-          </span>
-        </div>
-        <div class="info-item">
-          <span class="label">Prioridad</span>
-          <span class="value" [ngClass]="'prioridad-' + orden.prioridad">
-            {{ orden.prioridad | titlecase }}
-          </span>
-        </div>
-      </div>
+ <!-- En orden-detalle.component.html, modificar la sección de información -->
+<div class="info-grid">
+  <div class="info-item">
+    <span class="label">Orden #</span>
+    <span class="value">{{ orden.id_externo }}</span>
+  </div>
+  <div class="info-item">
+    <span class="label">Fecha Registro</span>
+    <span class="value fecha-registro">
+      <span class="fecha">{{ orden.fecha_registro | fecha:'dd/MM/yyyy' }}</span>
+      <span class="hora-registro">{{ orden.fecha_registro | fecha:'h:mm a' }}</span>
+    </span>
+  </div>
+  <div class="info-item">
+    <span class="label">Prioridad</span>
+    <span class="value" [ngClass]="'prioridad-' + orden.prioridad">
+      {{ orden.prioridad | titlecase }}
+    </span>
+  </div>
+</div>
 
+<!-- ✅ Agregar sección de fechas límite por servicio -->
+<div class="fechas-limite-section" *ngIf="orden.detalles && orden.detalles.length > 0">
+  <h3>Fechas Límite por Servicio</h3>
+  <div class="fechas-limite-list">
+    <div *ngFor="let detalle of orden.detalles" class="fecha-limite-item">
+      <span class="servicio-nombre">{{ detalle.servicio?.nombre }}</span>
+      <span class="fecha-limite-valor" [ngClass]="{'vencido': isDetalleVencido(detalle)}">
+        {{ detalle.fecha_limite | fecha }} {{ detalle.hora_limite | hora }}
+      </span>
+    </div>
+  </div>
+</div>
       <div class="montos-section">
         <h3>Información de Pagos</h3>
         <div class="montos-grid">

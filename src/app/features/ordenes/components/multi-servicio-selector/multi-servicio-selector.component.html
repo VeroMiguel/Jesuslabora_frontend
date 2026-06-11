@@ -1,4 +1,4 @@
-<!-- multi-servicio-selector.component.html -->
+<!-- multi-servicio-selector.component.html - VERSIÓN CORREGIDA -->
 <div class="multi-servicio-container">
   <div class="detalles-list">
     <div *ngFor="let detalle of detalles; let i = index" class="detalle-card">
@@ -10,28 +10,29 @@
       </div>
       
       <div class="detalle-body">
-        <!-- Selector de servicio con búsqueda -->
+        <!-- Selector de servicio -->
         <div class="form-group servicio-selector">
-          <label>Servicio *</label>
+          <label>SERVICIO *</label>
           <div class="searchable-select">
             <input 
               type="text"
               [value]="detalle.servicio_nombre || ''"
-              (input)="servicioBuscado = $any($event.target).value; filtrarServicios()"
-              (focus)="servicioBuscado = ''; filtrarServicios()"
+              (focus)="toggleDropdown(i)"
+              (input)="filtrarServicios(i, $any($event.target).value)"
               placeholder="Buscar servicio..."
               class="form-control"
               autocomplete="off"
             >
-            <div class="dropdown-list" *ngIf="mostrandoLista && serviciosFiltrados.length > 0">
+            <!-- ✅ LÍNEA CORREGIDA: verificar que el array existe antes de acceder a length -->
+            <div class="dropdown-list" *ngIf="indicesActivos[i] && serviciosFiltradosPorIndice[i] && serviciosFiltradosPorIndice[i].length > 0">
               <div 
-                *ngFor="let servicio of serviciosFiltrados"
+                *ngFor="let servicio of serviciosFiltradosPorIndice[i]"
                 class="dropdown-item"
-                (click)="seleccionarServicio(detalle, servicio)"
+                (click)="seleccionarServicio(i, servicio)"
               >
                 <span class="servicio-nombre">{{ servicio.nombre }}</span>
                 <span class="servicio-precio" *ngIf="servicio.precio_referencial">
-                  S/ {{ servicio.precio_referencial }}
+                  S/ {{ servicio.precio_referencial | number:'1.2-2' }}
                 </span>
               </div>
             </div>
@@ -40,7 +41,7 @@
         
         <div class="form-row">
           <div class="form-group">
-            <label>Cantidad</label>
+            <label>CANTIDAD</label>
             <input 
               type="number" 
               [(ngModel)]="detalle.cantidad" 
@@ -52,7 +53,7 @@
           </div>
           
           <div class="form-group">
-            <label>Precio Unitario (S/)</label>
+            <label>PRECIO UNITARIO (S/)</label>
             <input 
               type="number" 
               [(ngModel)]="detalle.precio_unitario" 
@@ -64,14 +65,14 @@
           </div>
           
           <div class="form-group subtotal">
-            <label>Subtotal</label>
-            <div class="subtotal-value">S/ {{ detalle.subtotal | number:'1.2-2' }}</div>
+            <label>SUBTOTAL</label>
+            <div class="subtotal-value">{{ detalle.subtotal | moneda }}</div>
           </div>
         </div>
         
         <div class="form-row">
           <div class="form-group">
-            <label>Fecha Límite (opcional)</label>
+            <label>FECHA LÍMITE (OPCIONAL)</label>
             <input 
               type="date" 
               [(ngModel)]="detalle.fecha_limite"
@@ -80,11 +81,12 @@
           </div>
           
           <div class="form-group">
-            <label>Hora Límite (opcional)</label>
+            <label>HORA LÍMITE (OPCIONAL)</label>
             <input 
               type="time" 
               [(ngModel)]="detalle.hora_limite"
               class="form-control"
+              step="60"
             >
           </div>
         </div>
@@ -98,6 +100,6 @@
   
   <div class="total-general">
     <span class="total-label">TOTAL DE LA ORDEN:</span>
-    <span class="total-value">S/ {{ totalGeneral | number:'1.2-2' }}</span>
+    <span class="total-value">{{ totalGeneral | moneda }}</span>
   </div>
 </div>

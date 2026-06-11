@@ -600,8 +600,28 @@ editarDetalleCliente() {
     });
 }
 
-
-
-
+// orden-detalle.component.ts - Agregar este método
+isDetalleVencido(detalle: any): boolean {
+  if (!detalle.fecha_limite) return false;
+  
+  let ahora: Date;
+  if (this.fechaHoraTimestamp > 0) {
+    ahora = new Date(this.fechaHoraTimestamp);
+  } else {
+    ahora = new Date();
+  }
+  
+  const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
+  let hora = 23, minutos = 59;
+  
+  if (detalle.hora_limite) {
+    const horaParts = detalle.hora_limite.split(':');
+    hora = parseInt(horaParts[0]);
+    minutos = parseInt(horaParts[1]);
+  }
+  
+  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos);
+  return ahora.getTime() > fechaLimiteCompleta.getTime();
+}
 
 }

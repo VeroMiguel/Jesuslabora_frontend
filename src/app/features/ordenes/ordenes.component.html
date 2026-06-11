@@ -109,28 +109,34 @@
            class="checkbox-select-item">
   </td>
   
-  <!-- Doctor / Servicio -->
-  <td class="col-doctor">
-    <div class="doctor-cell">
-      <div class="doctor-images">
-        <div class="doctor-avatar">
-          <app-image-zoom 
-            [src]="orden.doctor?.logo_url"
-            [alt]="orden.doctor?.nombre"
-            defaultImage="assets/images/default-doctor.png"
-            class="small-zoom">
-          </app-image-zoom>
-        </div>
-      </div>
-      <div class="doctor-info">
-        <strong>{{ orden.doctor?.nombre || 'Sin doctor' }}</strong>
-        <span class="servicio-nombre">{{ orden.servicio?.nombre || 'Sin servicio' }}</span>
-        <span *ngIf="orden.cliente_nombre" class="cliente-nombre">
-          <i class="fas fa-user"></i> {{ orden.cliente_nombre }}
-        </span>
+<!-- ordenes.component.html - Modificar la celda Doctor / Servicio -->
+<td class="col-doctor">
+  <div class="doctor-cell">
+    <div class="doctor-images">
+      <div class="doctor-avatar">
+        <app-image-zoom 
+          [src]="orden.doctor?.logo_url"
+          [alt]="orden.doctor?.nombre"
+          defaultImage="assets/images/default-doctor.png"
+          class="small-zoom">
+        </app-image-zoom>
       </div>
     </div>
-  </td>
+    <div class="doctor-info">
+      <strong>{{ orden.doctor?.nombre || 'Sin doctor' }}</strong>
+      <!-- ✅ Mostrar el primer servicio de los detalles -->
+      <span class="servicio-nombre">
+        {{ orden.detalles?.[0]?.servicio?.nombre || 'Sin servicio' }}
+      </span>
+      <span *ngIf="orden.detalles?.length > 1" class="servicio-count">
+        +{{ orden.detalles.length - 1 }} más
+      </span>
+      <span *ngIf="orden.cliente_nombre" class="cliente-nombre">
+        <i class="fas fa-user"></i> {{ orden.cliente_nombre }}
+      </span>
+    </div>
+  </div>
+</td>
   
   <!-- Estado -->
  <!-- En la celda de estado -->

@@ -242,3 +242,39 @@
   background: #f43f5e;
   color: white;
 }
+/* calendario-filtro.component.css - Agregar */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  z-index: 1000;
+  border-radius: 16px;
+}
+
+.loading-overlay .spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.calendario-wrapper {
+  position: relative;
+  min-height: 500px;
+}

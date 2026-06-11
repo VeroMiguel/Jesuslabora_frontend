@@ -993,3 +993,101 @@
         font-size: 0.85rem;
     }
 }
+/* Agregar al final de orden-detalle.component.css */
+.servicios-lista {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.servicio-detalle-item {
+  display: flex;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--mut, #64748b);
+}
+
+.servicio-nombre-detalle {
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.servicio-cantidad {
+  color: var(--mut, #64748b);
+}
+
+.servicio-precio {
+  color: #10b981;
+  font-weight: 500;
+}
+/* Agregar al final de orden-detalle.component.css */
+.fechas-limite-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--in, #f8fafc);
+  border-radius: 16px;
+  border: 1px solid var(--bor, #e2e8f0);
+}
+
+.fechas-limite-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--txt, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fechas-limite-section h3::before {
+  content: '📅';
+  font-size: 1rem;
+}
+
+.fechas-limite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fecha-limite-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surf, #ffffff);
+  border-radius: 12px;
+  border-left: 3px solid #6366f1;
+}
+
+.fecha-limite-item .servicio-nombre {
+  font-weight: 600;
+  color: var(--txt, #0f172a);
+  font-size: 0.9rem;
+}
+
+.fecha-limite-valor {
+  font-size: 0.85rem;
+  color: var(--mut, #64748b);
+  font-family: monospace;
+}
+
+.fecha-limite-valor.vencido {
+  color: #f43f5e;
+  font-weight: 600;
+}
+
+/* Tema oscuro */
+[data-theme="dark"] .fechas-limite-section {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .fecha-limite-item {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .fecha-limite-item .servicio-nombre {
+  color: #f1f5f9;
+}
