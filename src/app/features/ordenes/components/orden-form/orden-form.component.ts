@@ -1,4 +1,4 @@
-// orden-form.component.ts - VERSIÓN CORREGIDA
+// orden-form.component.ts - VERSIÓN COMPLETA CORREGIDA
 import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -27,11 +27,14 @@ export class OrdenFormComponent implements OnInit {
   detallesIniciales: any[] = [];
   esEdicion = false;
   ordenId?: number;
+  tipoCliente: 'unico' | 'multiple' = 'unico';
+  clienteGlobal = { nombre: '', detalle: '' };
 
   imagenSeleccionada: File | null = null;
   previewUrl: string | null = null;
   subiendoImagen = false;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild(MultiServicioSelectorComponent) multiServicioSelector!: MultiServicioSelectorComponent;
 
   constructor(
     private fb: FormBuilder,
@@ -48,16 +51,12 @@ export class OrdenFormComponent implements OnInit {
       doctor_id: ['', Validators.required],
       total: ['', [Validators.required, Validators.min(0)]],
       pago_inicial: [0, [Validators.min(0)]],
-      prioridad: ['normal'],
-      cliente_nombre: [''],
-      detalle_cliente: [''],
+      prioridad: ['normal']
     });
     
     this.detallesIniciales = [{
       servicio_id: null,
-      cantidad: 1,
       precio_unitario: 0,
-      subtotal: 0,
       fecha_limite: '',
       hora_limite: ''
     }];
@@ -112,91 +111,70 @@ export class OrdenFormComponent implements OnInit {
     });
   }
 
- // orden-form.component.ts - Modificar el método cargarOrden
-cargarOrden() {
-  if (!this.ordenId) return;
-  
-  this.ordenService.getOrden(this.ordenId).subscribe({
-    next: (orden) => {
-      const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
-      
-      console.log('📦 Orden cargada para editar:', orden);
-      console.log('📦 Detalles de la orden:', orden.detalles);
-      
-      if (orden.detalles && orden.detalles.length > 0) {
-        // ✅ Mapear correctamente los detalles
-        this.detallesIniciales = orden.detalles.map((det: any) => ({
-          id: det.id,
-          servicio_id: det.servicio_id,
-          servicio_nombre: det.servicio?.nombre || '',
-          cantidad: det.cantidad || 1,
-          precio_unitario: det.precio_unitario || 0,
-          subtotal: (det.cantidad || 1) * (det.precio_unitario || 0),
-          fecha_limite: det.fecha_limite || '',
-          hora_limite: det.hora_limite || ''
-        }));
+  cargarOrden() {
+    if (!this.ordenId) return;
+    
+    this.ordenService.getOrden(this.ordenId).subscribe({
+      next: (orden) => {
+        const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
         
-        console.log('✅ Detalles mapeados:', this.detallesIniciales);
-      } else {
-        this.detallesIniciales = [{
-          servicio_id: null,
-          cantidad: 1,
-          precio_unitario: 0,
-          subtotal: 0,
-          fecha_limite: '',
-          hora_limite: ''
-        }];
+        // Cargar cliente global si existe
+        if (orden.cliente_nombre) {
+          this.clienteGlobal = {
+            nombre: orden.cliente_nombre,
+            detalle: orden.detalle_cliente || ''
+          };
+          this.tipoCliente = 'unico';
+        } else if (orden.detalles?.some((d: any) => d.cliente_nombre)) {
+          this.tipoCliente = 'multiple';
+        }
+        
+        if (orden.detalles && orden.detalles.length > 0) {
+          this.detallesIniciales = orden.detalles.map((det: any) => ({
+            id: det.id,
+            servicio_id: det.servicio_id,
+            servicio_nombre: det.servicio?.nombre || '',
+            precio_unitario: Number(det.precio_unitario) || 0,
+            fecha_limite: det.fecha_limite || '',
+            hora_limite: det.hora_limite || '',
+            cliente_nombre: det.cliente_nombre || '',
+            detalle_cliente: det.detalle_cliente || '',
+            imagen_url: det.imagen_referencia_url || '',
+            imagen_preview: det.imagen_referencia_url || ''
+          }));
+        }
+        
+        this.ordenForm.patchValue({
+          doctor_id: orden.doctor_id,
+          total: orden.total,
+          pago_inicial: totalPagado,
+          prioridad: orden.prioridad
+        });
+        
+        setTimeout(() => {
+          this.cdr.detectChanges();
+        }, 100);
+      },
+      error: (error) => {
+        console.error('Error cargando orden:', error);
+        Swal.fire('Error', 'No se pudo cargar la orden', 'error');
       }
-      
-      this.ordenForm.patchValue({
-        doctor_id: orden.doctor_id,
-        total: orden.total,
-        pago_inicial: totalPagado,
-        prioridad: orden.prioridad,
-        cliente_nombre: orden.cliente_nombre,
-        detalle_cliente: orden.detalle_cliente
-      });
-      
-      if (orden.imagen_referencia_url) {
-        const imagenesUrl = environment.baseUrl.replace(/\/+$/, '');
-        this.previewUrl = `${imagenesUrl}${orden.imagen_referencia_url}`;
-      }
-      
-      // ✅ Forzar actualización del componente hijo
-      setTimeout(() => {
-        this.cdr.detectChanges();
-      }, 100);
-    },
-    error: (error) => {
-      console.error('Error cargando orden:', error);
-      Swal.fire('Error', 'No se pudo cargar la orden', 'error');
-    }
-  });
-}
+    });
+  }
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
       const MAX_SIZE = 10 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Imagen muy grande',
-          text: `La imagen no puede superar los 10MB.`,
-          confirmButtonColor: '#f43f5e'
-        });
+        Swal.fire({ icon: 'error', title: 'Imagen muy grande', text: 'La imagen no puede superar los 10MB.', confirmButtonColor: '#f43f5e' });
         this.fileInput.nativeElement.value = '';
         return;
       }
       
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Formato no soportado',
-          text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP',
-          confirmButtonColor: '#f43f5e'
-        });
+        Swal.fire({ icon: 'error', title: 'Formato no soportado', text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP', confirmButtonColor: '#f43f5e' });
         this.fileInput.nativeElement.value = '';
         return;
       }
@@ -215,9 +193,7 @@ cargarOrden() {
     this.previewUrl = null;
   }
 
-  // ✅ MÉTODO onSubmit CORREGIDO
-  onSubmit() {
-    // Validar que haya al menos un detalle válido
+  async onSubmit() {
     const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
     
     if (detallesValidos.length === 0) {
@@ -232,66 +208,66 @@ cargarOrden() {
     
     const formValue = this.ordenForm.value;
     
-    // Preparar datos para enviar al backend
+    // Obtener cliente global del componente hijo
+    const clienteGlobal = this.multiServicioSelector?.clienteUnico || { nombre: '', detalle: '' };
+    
     const datosParaEnviar = {
       doctor_id: formValue.doctor_id,
       detalles: detallesValidos.map((d: any) => ({
         servicio_id: d.servicio_id,
-        cantidad: d.cantidad,
-        precio_unitario: d.precio_unitario,
+        precio_unitario: Number(d.precio_unitario),
         fecha_limite: d.fecha_limite || null,
-        hora_limite: d.hora_limite || null
+        hora_limite: d.hora_limite || null,
+        cliente_nombre: this.tipoCliente === 'multiple' ? (d.cliente_nombre || null) : null,
+        detalle_cliente: this.tipoCliente === 'multiple' ? (d.detalle_cliente || null) : null
       })),
-      pago_inicial: formValue.pago_inicial || 0,
+      pago_inicial: Number(formValue.pago_inicial) || 0,
       prioridad: formValue.prioridad,
-      cliente_nombre: formValue.cliente_nombre || null,
-      detalle_cliente: formValue.detalle_cliente || null
+      cliente_nombre: this.tipoCliente === 'unico' ? (clienteGlobal.nombre || null) : null,
+      detalle_cliente: this.tipoCliente === 'unico' ? (clienteGlobal.detalle || null) : null
     };
     
-    // Log para depuración
     console.log('📤 Enviando orden:', JSON.stringify(datosParaEnviar, null, 2));
     
     this.subiendoImagen = true;
     
-    if (this.esEdicion && this.ordenId) {
-      // ACTUALIZAR ORDEN
-      this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar).subscribe({
-        next: (respuesta: any) => {
-          this.subiendoImagen = false;
-          Swal.fire('¡Éxito!', 'Orden actualizada correctamente', 'success');
-          this.router.navigate(['/ordenes', this.ordenId]);
-        },
-        error: (error: any) => {
-          this.subiendoImagen = false;
-          console.error('Error actualizando orden:', error);
-          if (error.error && error.error.error) {
-            Swal.fire('Error', error.error.error, 'error');
-          } else {
-            Swal.fire('Error', 'No se pudo actualizar la orden', 'error');
+    const ordenServiceMethod = this.esEdicion && this.ordenId 
+      ? this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar)
+      : this.ordenService.crearOrden(datosParaEnviar);
+    
+    ordenServiceMethod.subscribe({
+      next: async (respuesta: any) => {
+        const ordenCreada = respuesta.orden || respuesta;
+        const ordenId = ordenCreada.id;
+        
+        if (ordenId && this.detallesIniciales) {
+          for (let i = 0; i < this.detallesIniciales.length; i++) {
+            const detalle = this.detallesIniciales[i];
+            if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
+              const detalleId = ordenCreada.detalles[i].id;
+              await this.subirImagenDetalle(detalleId, detalle.imagen_file);
+            }
           }
         }
-      });
-    } else {
-      // CREAR NUEVA ORDEN
-      this.ordenService.crearOrden(datosParaEnviar).subscribe({
-        next: (respuesta: any) => {
-          this.subiendoImagen = false;
-          Swal.fire('¡Éxito!', 'Orden creada correctamente', 'success');
-          this.router.navigate(['/ordenes']);
-        },
-        error: (error: any) => {
-          this.subiendoImagen = false;
-          console.error('Error creando orden:', error);
-          // Mostrar mensaje de error detallado
-          if (error.error && error.error.error) {
-            Swal.fire('Error', error.error.error, 'error');
-          } else if (error.error && error.error.details) {
-            Swal.fire('Error', error.error.details, 'error');
-          } else {
-            Swal.fire('Error', 'No se pudo crear la orden', 'error');
-          }
-        }
-      });
+        
+        this.subiendoImagen = false;
+        Swal.fire('¡Éxito!', `Orden ${this.esEdicion ? 'actualizada' : 'creada'} correctamente`, 'success');
+        this.router.navigate(['/ordenes']);
+      },
+      error: (error: any) => {
+        this.subiendoImagen = false;
+        console.error('Error:', error);
+        Swal.fire('Error', error.error?.error || error.error?.details || 'No se pudo procesar la orden', 'error');
+      }
+    });
+  }
+
+  async subirImagenDetalle(detalleId: number, file: File): Promise<void> {
+    try {
+      await this.ordenService.subirImagenDetalle(detalleId, file).toPromise();
+      console.log(`✅ Imagen subida para detalle ${detalleId}`);
+    } catch (error) {
+      console.error(`❌ Error subiendo imagen para detalle ${detalleId}:`, error);
     }
   }
 
@@ -301,5 +277,13 @@ cargarOrden() {
   
   onTotalChange(total: number) {
     this.ordenForm.patchValue({ total: total });
+  }
+
+  onClienteGlobalChange(cliente: { nombre: string; detalle: string }) {
+    this.clienteGlobal = cliente;
+  }
+
+  onTipoClienteChange(tipo: 'unico' | 'multiple') {
+    this.tipoCliente = tipo;
   }
 }

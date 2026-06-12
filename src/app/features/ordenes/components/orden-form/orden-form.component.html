@@ -1,4 +1,4 @@
-<!-- orden-form.component.html - Reemplazar la sección de servicio y total -->
+<!-- orden-form.component.html - VERSIÓN LIMPIA -->
 <div class="form-container">
   <div class="header">
     <h1>{{ esEdicion ? 'Editar' : 'Nueva' }} Orden</h1>
@@ -21,18 +21,22 @@
       ></app-searchable-select>
     </div>
 
-    <!-- NUEVO: Múltiples servicios -->
+    <!-- Servicios (componente compacto) -->
     <div class="form-group">
       <label>Servicios *</label>
       <app-multi-servicio-selector
+        #multiServicioSelector
         [serviciosDisponibles]="servicios"
         [detallesIniciales]="detallesIniciales"
+        [clienteGlobal]="clienteGlobal"
         (detallesChange)="onDetallesChange($event)"
         (totalChange)="onTotalChange($event)"
+        (clienteGlobalChange)="onClienteGlobalChange($event)"
+        (tipoClienteChange)="onTipoClienteChange($event)"
       ></app-multi-servicio-selector>
     </div>
 
-    <!-- Resto del formulario -->
+    <!-- Pago Inicial y Prioridad -->
     <div class="form-row">
       <div class="form-group">
         <label>Pago Inicial (S/)</label>
@@ -49,53 +53,7 @@
       </div>
     </div>
 
-    <!-- Cliente -->
-    <div class="form-group">
-      <label>Cliente</label>
-      <input type="text" formControlName="cliente_nombre" class="form-control" placeholder="Nombre del paciente">
-    </div>
-
-    <!-- Detalle del caso -->
-    <div class="form-group">
-      <label>Detalle del Caso <span class="optional">(Opcional)</span></label>
-      <textarea formControlName="detalle_cliente" class="form-control detalle-textarea" rows="3"
-        placeholder="Ej: Dos coronas de porcelana, necesita corona de zirconio">
-      </textarea>
-      <small class="text-muted">
-        <i class="fas fa-info-circle"></i> 
-        Especifique detalles como: pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
-      </small>
-    </div>
-
-    <!-- Imagen de referencia -->
-    <div class="form-section">
-      <h2 class="section-title">Imagen de Referencia (Opcional)</h2>
-      <div class="image-upload-container">
-        <div class="image-preview-card" *ngIf="previewUrl">
-          <div class="image-preview-wrapper">
-            <img [src]="previewUrl" alt="Vista previa" class="image-preview">
-            <button type="button" class="btn-remove-image" (click)="removerImagen()">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="upload-area">
-          <div class="file-input-wrapper">
-            <input type="file" (change)="onFileSelected($event)" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" #fileInput>
-            <button type="button" class="btn-upload" (click)="fileInput.click()">
-              <i class="fas fa-cloud-upload-alt"></i>
-              {{ previewUrl ? 'Cambiar imagen' : 'Subir imagen de referencia' }}
-            </button>
-            <span class="file-name">{{ imagenSeleccionada?.name || 'Ningún archivo seleccionado' }}</span>
-          </div>
-          <div class="upload-hint">
-            <i class="fas fa-info-circle"></i>
-            <span>Formatos permitidos: JPG, PNG, GIF, WEBP. Máximo 15MB.</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- ✅ ELIMINADO: Cliente, Detalle del Caso, Imagen de Referencia -->
 
     <div class="form-actions">
       <button type="button" class="btn-secondary" routerLink="/ordenes">Cancelar</button>

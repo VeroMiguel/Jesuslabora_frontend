@@ -1091,3 +1091,45 @@
 [data-theme="dark"] .fecha-limite-item .servicio-nombre {
   color: #f1f5f9;
 }
+/* Estilos para imágenes por servicio */
+.servicio-info {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+.servicio-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--bor, #e2e8f0);
+  transition: transform 0.2s;
+}
+
+.servicio-thumbnail:hover {
+  transform: scale(1.05);
+}
+
+.servicio-cliente {
+  font-size: 0.7rem;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.servicio-detalle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bor, #e2e8f0);
+}

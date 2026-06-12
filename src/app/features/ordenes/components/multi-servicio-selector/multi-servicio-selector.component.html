@@ -1,105 +1,118 @@
-<!-- multi-servicio-selector.component.html - VERSIÓN CORREGIDA -->
+<!-- multi-servicio-selector.component.html - VERSIÓN ULTRA COMPACTA -->
 <div class="multi-servicio-container">
-  <div class="detalles-list">
-    <div *ngFor="let detalle of detalles; let i = index" class="detalle-card">
-      <div class="detalle-header">
-        <span class="detalle-numero">Servicio {{ i + 1 }}</span>
-        <button type="button" class="btn-remove" (click)="removerDetalle(i)" *ngIf="detalles.length > 1">
-          <i class="fas fa-trash-alt"></i>
+  <!-- Encabezado con selector de tipo de cliente -->
+  <div class="tipo-cliente-selector">
+    <label class="switch-label">
+      <input type="radio" [(ngModel)]="tipoCliente" value="unico" (change)="onTipoClienteChange()">
+      <span>Mismo cliente para todos</span>
+    </label>
+    <label class="switch-label">
+      <input type="radio" [(ngModel)]="tipoCliente" value="multiple" (change)="onTipoClienteChange()">
+      <span>Cliente diferente por servicio</span>
+    </label>
+  </div>
+
+  <!-- Campos comunes del cliente (cuando es único) -->
+  <div class="cliente-unico" *ngIf="tipoCliente === 'unico'">
+    <div class="cliente-unico-fields">
+      <input 
+        type="text" 
+        [(ngModel)]="clienteUnico.nombre"
+        placeholder="Nombre del cliente"
+        class="cliente-input"
+      >
+      <textarea 
+        [(ngModel)]="clienteUnico.detalle"
+        placeholder="Detalle del caso (opcional)"
+        rows="2"
+        class="detalle-input"
+      ></textarea>
+    </div>
+  </div>
+
+  <!-- Lista de servicios (compacta) -->
+  <div class="servicios-list">
+    <div *ngFor="let detalle of detalles; let i = index" class="servicio-item">
+      <!-- Fila principal del servicio (siempre visible) -->
+      <div class="servicio-fila-principal" (click)="toggleExpandir(i)">
+        <div class="servicio-info">
+          <span class="servicio-numero">{{ i + 1 }}</span>
+          <span class="servicio-nombre" [class.seleccionado]="detalle.servicio_id">
+            {{ detalle.servicio_nombre || 'Seleccionar servicio' }}
+          </span>
+          <span class="servicio-precio" *ngIf="detalle.precio_unitario > 0">
+            {{ detalle.precio_unitario | moneda }}
+          </span>
+          <i class="fas fa-chevron-down expand-icon" [class.rotated]="expandidos[i]"></i>
+        </div>
+        <button type="button" class="btn-remove-servicio" (click)="removerDetalle(i, $event)" *ngIf="detalles.length > 1">
+          <i class="fas fa-times"></i>
         </button>
       </div>
-      
-      <div class="detalle-body">
+
+      <!-- Detalles expandidos (solo cuando se hace clic) -->
+      <div class="servicio-detalles" *ngIf="expandidos[i]">
         <!-- Selector de servicio -->
-        <div class="form-group servicio-selector">
-          <label>SERVICIO *</label>
-          <div class="searchable-select">
-            <input 
-              type="text"
-              [value]="detalle.servicio_nombre || ''"
-              (focus)="toggleDropdown(i)"
-              (input)="filtrarServicios(i, $any($event.target).value)"
-              placeholder="Buscar servicio..."
-              class="form-control"
-              autocomplete="off"
-            >
-            <!-- ✅ LÍNEA CORREGIDA: verificar que el array existe antes de acceder a length -->
-            <div class="dropdown-list" *ngIf="indicesActivos[i] && serviciosFiltradosPorIndice[i] && serviciosFiltradosPorIndice[i].length > 0">
-              <div 
-                *ngFor="let servicio of serviciosFiltradosPorIndice[i]"
-                class="dropdown-item"
-                (click)="seleccionarServicio(i, servicio)"
-              >
-                <span class="servicio-nombre">{{ servicio.nombre }}</span>
-                <span class="servicio-precio" *ngIf="servicio.precio_referencial">
-                  S/ {{ servicio.precio_referencial | number:'1.2-2' }}
-                </span>
-              </div>
+        <div class="servicio-selector-wrapper">
+          <input 
+            type="text"
+            [value]="detalle.servicio_nombre || ''"
+            (focus)="toggleDropdown(i)"
+            (input)="filtrarServicios(i, $any($event.target).value)"
+            placeholder="Buscar servicio..."
+            class="servicio-busqueda"
+          >
+          <div class="dropdown-list" *ngIf="indicesActivos[i] && serviciosFiltradosPorIndice[i]?.length">
+            <div *ngFor="let servicio of serviciosFiltradosPorIndice[i]" class="dropdown-item" (click)="seleccionarServicio(i, servicio)">
+              <span>{{ servicio.nombre }}</span>
+              <span class="precio">{{ servicio.precio_referencial | moneda }}</span>
             </div>
           </div>
         </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>CANTIDAD</label>
-            <input 
-              type="number" 
-              [(ngModel)]="detalle.cantidad" 
-              (change)="calcularSubtotal(detalle)"
-              min="1" 
-              step="1"
-              class="form-control"
-            >
-          </div>
-          
-          <div class="form-group">
-            <label>PRECIO UNITARIO (S/)</label>
-            <input 
-              type="number" 
-              [(ngModel)]="detalle.precio_unitario" 
-              (change)="calcularSubtotal(detalle)"
-              min="0" 
-              step="0.01"
-              class="form-control"
-            >
-          </div>
-          
-          <div class="form-group subtotal">
-            <label>SUBTOTAL</label>
-            <div class="subtotal-value">{{ detalle.subtotal | moneda }}</div>
-          </div>
+
+        <!-- Precio unitario -->
+        <div class="campo-precio">
+          <label>Precio</label>
+          <input type="number" [(ngModel)]="detalle.precio_unitario" (change)="calcularTotal()" step="0.01" class="precio-input">
         </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>FECHA LÍMITE (OPCIONAL)</label>
-            <input 
-              type="date" 
-              [(ngModel)]="detalle.fecha_limite"
-              class="form-control"
-            >
+
+        <!-- Fecha y hora límite -->
+        <div class="fecha-hora-row">
+          <input type="date" [(ngModel)]="detalle.fecha_limite" placeholder="Fecha límite" class="fecha-input">
+          <input type="time" [(ngModel)]="detalle.hora_limite" placeholder="Hora" class="hora-input" step="60">
+        </div>
+
+        <!-- Cliente por servicio (solo si tipoCliente === 'multiple') -->
+        <div class="cliente-servicio" *ngIf="tipoCliente === 'multiple'">
+          <input type="text" [(ngModel)]="detalle.cliente_nombre" placeholder="Nombre del cliente" class="cliente-input-servicio">
+          <textarea [(ngModel)]="detalle.detalle_cliente" placeholder="Detalle del caso (opcional)" rows="1" class="detalle-input-servicio"></textarea>
+        </div>
+
+        <!-- Imagen de referencia -->
+        <div class="imagen-servicio">
+          <div class="imagen-upload" *ngIf="!detalle.imagen_preview">
+            <button type="button" class="btn-subir-imagen" (click)="abrirSelectorImagen(i)">
+              <i class="fas fa-image"></i> Subir imagen
+            </button>
           </div>
-          
-          <div class="form-group">
-            <label>HORA LÍMITE (OPCIONAL)</label>
-            <input 
-              type="time" 
-              [(ngModel)]="detalle.hora_limite"
-              class="form-control"
-              step="60"
-            >
+          <div class="imagen-preview" *ngIf="detalle.imagen_preview">
+            <img [src]="detalle.imagen_preview" (click)="verImagen(detalle.imagen_preview)">
+            <button type="button" class="btn-remove-img" (click)="removerImagen(i)">×</button>
           </div>
+          <span class="imagen-hint" *ngIf="detalle.imagen_nombre">{{ detalle.imagen_nombre }}</span>
         </div>
       </div>
     </div>
   </div>
-  
-  <button type="button" class="btn-agregar-servicio" (click)="agregarDetalle()">
-    <i class="fas fa-plus-circle"></i> Agregar otro servicio
+
+  <!-- Botón agregar servicio -->
+  <button type="button" class="btn-agregar" (click)="agregarDetalle()">
+    <i class="fas fa-plus"></i> Agregar otro servicio
   </button>
-  
+
+  <!-- Total -->
   <div class="total-general">
-    <span class="total-label">TOTAL DE LA ORDEN:</span>
-    <span class="total-value">{{ totalGeneral | moneda }}</span>
+    <span>TOTAL:</span>
+    <strong>{{ totalGeneral | moneda }}</strong>
   </div>
 </div>

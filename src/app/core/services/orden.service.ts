@@ -239,7 +239,32 @@ getOrdenesConFiltros(filtros: {
         })
     );
 }
+// orden.service.ts - AGREGAR ESTOS MÉTODOS (después de los existentes)
 
+// Subir imagen para un detalle específico (servicio)
+subirImagenDetalle(detalleId: number, imagen: File): Observable<any> {
+  const formData = new FormData();
+  formData.append('imagen', imagen);
+  
+  return this.http.post(`${this.apiUrl}/detalles/${detalleId}/imagen`, formData).pipe(
+    timeout(10000),
+    catchError(error => {
+      console.error(`Error subiendo imagen para detalle ${detalleId}:`, error);
+      return throwError(() => error);
+    })
+  );
+}
+
+// Eliminar imagen de un detalle específico
+eliminarImagenDetalle(detalleId: number): Observable<any> {
+  return this.http.delete(`${this.apiUrl}/detalles/${detalleId}/imagen`).pipe(
+    timeout(10000),
+    catchError(error => {
+      console.error(`Error eliminando imagen del detalle ${detalleId}:`, error);
+      return throwError(() => error);
+    })
+  );
+}
 
 
 }

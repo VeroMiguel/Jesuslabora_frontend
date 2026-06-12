@@ -623,5 +623,15 @@ isDetalleVencido(detalle: any): boolean {
   const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos);
   return ahora.getTime() > fechaLimiteCompleta.getTime();
 }
+// orden-detalle.component.ts - AGREGAR ESTE MÉTODO
 
+verImagenServicio(url: string) {
+  Swal.fire({
+    imageUrl: url,
+    imageAlt: 'Imagen de referencia del servicio',
+    width: 'auto',
+    showConfirmButton: true,
+    confirmButtonText: 'Cerrar'
+  });
+}
 }
