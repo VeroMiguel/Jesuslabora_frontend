@@ -4,7 +4,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ServicioService } from '../../../../core/services/servicio.service';
 import { MonedaPipe } from '../../../../shared/pipes/moneda.pipe';
+import { environment } from 'src/environments/environment';
 import Swal from 'sweetalert2';
+import { ImagenPipe } from '../../../../shared/pipes/imagen.pipe';
 
 export interface DetalleServicio {
   id?: number;
@@ -24,7 +26,7 @@ export interface DetalleServicio {
 @Component({
   selector: 'app-multi-servicio-selector',
   standalone: true,
-  imports: [CommonModule, FormsModule, MonedaPipe],
+  imports: [CommonModule, FormsModule, MonedaPipe, ImagenPipe,],
   templateUrl: './multi-servicio-selector.component.html',
   styleUrls: ['./multi-servicio-selector.component.css']
 })
@@ -32,6 +34,8 @@ export class MultiServicioSelectorComponent implements OnInit, OnChanges {
   @Input() serviciosDisponibles: any[] = [];
   @Input() detallesIniciales: DetalleServicio[] = [];
   @Input() clienteGlobal: { nombre: string; detalle: string } = { nombre: '', detalle: '' };
+    // multi-servicio-selector.component.ts - AGREGAR ESTO
+@Input() tipoCliente: 'unico' | 'multiple' = 'unico';
   @Output() detallesChange = new EventEmitter<DetalleServicio[]>();
   @Output() totalChange = new EventEmitter<number>();
   @Output() clienteGlobalChange = new EventEmitter<{ nombre: string; detalle: string }>();
@@ -39,20 +43,19 @@ export class MultiServicioSelectorComponent implements OnInit, OnChanges {
   @Output() tipoClienteChange = new EventEmitter<'unico' | 'multiple'>();
 
 
-
-
-
-
-  
   detalles: DetalleServicio[] = [];
   totalGeneral: number = 0;
   expandidos: { [key: number]: boolean } = {};
-  tipoCliente: 'unico' | 'multiple' = 'unico';
+
   clienteUnico = { nombre: '', detalle: '' };
   
   indicesActivos: { [key: number]: boolean } = {};
   busquedaPorIndice: { [key: number]: string } = {};
   serviciosFiltradosPorIndice: { [key: number]: any[] } = {};
+
+
+   // ✅ Guardar copia de los clientes por servicio originales
+  private clientesOriginales: { [key: number]: { cliente_nombre?: string; detalle_cliente?: string } } = {};
   
   constructor(private servicioService: ServicioService) {}
   
@@ -61,27 +64,60 @@ export class MultiServicioSelectorComponent implements OnInit, OnChanges {
     this.inicializarDetalles();
   }
   
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['detallesIniciales']?.currentValue) {
-      this.detalles = [...changes['detallesIniciales'].currentValue];
-      this.calcularTotal();
-    }
-    if (changes['clienteGlobal']?.currentValue) {
-      this.clienteUnico = { ...changes['clienteGlobal'].currentValue };
-    }
-  }
-  
-// Y modificar el método onTipoClienteChange
-onTipoClienteChange() {
-  this.tipoClienteChange.emit(this.tipoCliente);
-  if (this.tipoCliente === 'unico') {
-    this.detalles.forEach(d => {
-      d.cliente_nombre = undefined;
-      d.detalle_cliente = undefined;
+// multi-servicio-selector.component.ts - AGREGAR ngOnChanges para sincronizar
+// multi-servicio-selector.component.ts - MODIFICAR ngOnChanges
+ngOnChanges(changes: SimpleChanges) {
+  if (changes['detallesIniciales']?.currentValue) {
+    this.detalles = [...changes['detallesIniciales'].currentValue];
+    // ✅ Guardar copia de los clientes originales
+    this.detalles.forEach((d, i) => {
+      if (d.cliente_nombre || d.detalle_cliente) {
+        this.clientesOriginales[i] = {
+          cliente_nombre: d.cliente_nombre,
+          detalle_cliente: d.detalle_cliente
+        };
+      }
     });
+    this.calcularTotal();
   }
-  this.emitirCambios();
+  if (changes['clienteGlobal']?.currentValue) {
+    this.clienteUnico = { ...changes['clienteGlobal'].currentValue };
+  }
+  if (changes['tipoCliente']?.currentValue !== undefined) {
+    this.tipoCliente = changes['tipoCliente'].currentValue;
+  }
 }
+  
+// MODIFICAR onTipoClienteChange
+  onTipoClienteChange() {
+    if (this.tipoCliente === 'unico') {
+      // ✅ Guardar copia de los clientes por servicio ANTES de limpiar
+      this.detalles.forEach((d, i) => {
+        if (d.cliente_nombre || d.detalle_cliente) {
+          this.clientesOriginales[i] = {
+            cliente_nombre: d.cliente_nombre,
+            detalle_cliente: d.detalle_cliente
+          };
+        }
+      });
+      // Limpiar clientes por servicio
+      this.detalles.forEach(d => {
+        d.cliente_nombre = undefined;
+        d.detalle_cliente = undefined;
+      });
+    } else {
+      // ✅ Restaurar clientes por servicio desde la copia guardada
+      this.detalles.forEach((d, i) => {
+        if (this.clientesOriginales[i]) {
+          d.cliente_nombre = this.clientesOriginales[i].cliente_nombre;
+          d.detalle_cliente = this.clientesOriginales[i].detalle_cliente;
+        }
+      });
+    }
+    this.tipoClienteChange.emit(this.tipoCliente);
+    this.emitirCambios();
+  }
+
   
   private inicializarDetalles() {
     if (this.detallesIniciales && this.detallesIniciales.length > 0) {
@@ -136,26 +172,45 @@ seleccionarServicio(index: number, servicio: any) {
   this.emitirCambios();
 }
   
-  agregarDetalle() {
-    this.detalles.push({
-      servicio_id: null,
-      precio_unitario: 0,
-      fecha_limite: '',
-      hora_limite: ''
+// multi-servicio-selector.component.ts - MODIFICAR agregarDetalle
+agregarDetalle() {
+  const nuevoIndex = this.detalles.length;
+  this.detalles.push({
+    servicio_id: null,
+    precio_unitario: 0,
+    fecha_limite: '',
+    hora_limite: ''
+  });
+  // ✅ Inicializar entrada en clientesOriginales para el nuevo detalle
+  this.clientesOriginales[nuevoIndex] = { cliente_nombre: undefined, detalle_cliente: undefined };
+  this.expandidos[nuevoIndex] = true;
+  this.emitirCambios();
+}
+  
+// multi-servicio-selector.component.ts - MODIFICAR removerDetalle
+removerDetalle(index: number, event: Event) {
+  event?.stopPropagation();
+  if (this.detalles.length > 1) {
+    this.detalles.splice(index, 1);
+    // ✅ Eliminar la entrada de clientesOriginales
+    delete this.clientesOriginales[index];
+    // Reindexar clientesOriginales (opcional, pero recomendado)
+    const newClientesOriginales: typeof this.clientesOriginales = {};
+    Object.keys(this.clientesOriginales).forEach(key => {
+      const oldIndex = parseInt(key);
+      if (oldIndex > index) {
+        newClientesOriginales[oldIndex - 1] = this.clientesOriginales[oldIndex];
+      } else if (oldIndex < index) {
+        newClientesOriginales[oldIndex] = this.clientesOriginales[oldIndex];
+      }
     });
-    this.expandidos[this.detalles.length - 1] = true;
+    this.clientesOriginales = newClientesOriginales;
+    
+    delete this.expandidos[index];
+    this.calcularTotal();
     this.emitirCambios();
   }
-  
-  removerDetalle(index: number, event: Event) {
-    event?.stopPropagation();
-    if (this.detalles.length > 1) {
-      this.detalles.splice(index, 1);
-      delete this.expandidos[index];
-      this.calcularTotal();
-      this.emitirCambios();
-    }
-  }
+}
   
 // multi-servicio-selector.component.ts - CORREGIR calcularTotal
 calcularTotal() {
@@ -211,7 +266,68 @@ calcularTotal() {
     this.emitirCambios();
   }
   
-  verImagen(url: string) {
-    Swal.fire({ imageUrl: url, imageAlt: 'Imagen', width: 'auto', showConfirmButton: true });
+
+// multi-servicio-selector.component.ts - AGREGAR ESTE MÉTODO
+
+// ✅ Misma lógica que en orden-detalle.component.ts
+async verImagenServicio(url: string) {
+  // Asegurar que la URL sea completa
+  let imagenUrl = url;
+  if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+    const baseUrl = environment.apiUrl.replace('/api', '');
+    imagenUrl = `${baseUrl}${url}`;
   }
+  
+  console.log('🔍 Mostrando imagen:', imagenUrl);
+  
+  // Crear un elemento de imagen temporal para obtener dimensiones
+  const img = new Image();
+  img.src = imagenUrl;
+  
+  await new Promise((resolve) => {
+    img.onload = resolve;
+    img.onerror = resolve;
+  });
+  
+  // Calcular dimensiones máximas (80% de la pantalla)
+  const maxWidth = window.innerWidth * 0.8;
+  const maxHeight = window.innerHeight * 0.8;
+  
+  let imageWidth = img.width;
+  let imageHeight = img.height;
+  
+  // Si la imagen es más grande que la pantalla, escalarla
+  if (imageWidth > maxWidth || imageHeight > maxHeight) {
+    const ratio = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
+    imageWidth = imageWidth * ratio;
+    imageHeight = imageHeight * ratio;
+  }
+  
+  try {
+    await Swal.fire({
+      imageUrl: imagenUrl,
+      imageAlt: 'Imagen de referencia del servicio',
+      width: `${imageWidth + 40}px`,
+      showConfirmButton: true,
+      confirmButtonText: 'Cerrar',
+      imageWidth: `${imageWidth}px`,
+      imageHeight: `${imageHeight}px`,
+      backdrop: true,
+      allowOutsideClick: true,
+      customClass: {
+        image: 'servicio-imagen-modal'
+      }
+    });
+  } catch (err) {
+    console.error('Error mostrando imagen:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo cargar la imagen'
+    });
+  }
+}
+
+// ✅ También puedes eliminar o mantener el método verImagen() existente
+// pero asegúrate de que el template use verImagenServicio()
 }

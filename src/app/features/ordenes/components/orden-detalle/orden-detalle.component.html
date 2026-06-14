@@ -22,6 +22,7 @@
         <!-- ✅ Mostrar lista de servicios -->
         <div class="servicios-lista">
           <!-- En orden-detalle.component.html, dentro del loop de servicios -->
+<!-- En orden-detalle.component.html, dentro del loop de servicios -->
 <div *ngFor="let detalle of orden.detalles" class="servicio-detalle-item">
   <div class="servicio-info">
     <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
@@ -32,16 +33,22 @@
   <!-- ✅ Mostrar imagen del servicio si existe -->
   <div class="servicio-imagen-mini" *ngIf="detalle.imagen_referencia_url">
     <img 
-      [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-service.png'" 
-      (click)="verImagenServicio(detalle.imagen_referencia_url)"
+  [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-image.png'" 
+  (error)="onImageError($event)"
+  (click)="verImagenServicio(detalle.imagen_referencia_url)"
       class="servicio-thumbnail"
       title="Ver imagen de referencia"
     >
   </div>
   
-  <!-- ✅ Mostrar cliente por servicio -->
-  <div class="servicio-cliente" *ngIf="detalle.cliente_nombre">
-    <i class="fas fa-user"></i> {{ detalle.cliente_nombre }}
+  <!-- ✅ Mostrar cliente y detalle por servicio -->
+  <div class="servicio-cliente-info" *ngIf="detalle.cliente_nombre">
+    <div class="servicio-cliente">
+      <i class="fas fa-user"></i> {{ detalle.cliente_nombre }}
+    </div>
+    <div class="servicio-detalle" *ngIf="detalle.detalle_cliente">
+      <i class="fas fa-comment"></i> {{ detalle.detalle_cliente }}
+    </div>
   </div>
 </div>
         </div>

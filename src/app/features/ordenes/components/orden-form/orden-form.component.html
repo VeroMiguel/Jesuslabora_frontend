@@ -24,16 +24,18 @@
     <!-- Servicios (componente compacto) -->
     <div class="form-group">
       <label>Servicios *</label>
-      <app-multi-servicio-selector
-        #multiServicioSelector
-        [serviciosDisponibles]="servicios"
-        [detallesIniciales]="detallesIniciales"
-        [clienteGlobal]="clienteGlobal"
-        (detallesChange)="onDetallesChange($event)"
-        (totalChange)="onTotalChange($event)"
-        (clienteGlobalChange)="onClienteGlobalChange($event)"
-        (tipoClienteChange)="onTipoClienteChange($event)"
-      ></app-multi-servicio-selector>
+     <!-- orden-form.component.html - MODIFICAR -->
+<app-multi-servicio-selector
+  #multiServicioSelector
+  [serviciosDisponibles]="servicios"
+  [detallesIniciales]="detallesIniciales"
+  [clienteGlobal]="clienteGlobal"
+  [tipoCliente]="tipoCliente"        ← ✅ AGREGAR ESTA LÍNEA
+  (detallesChange)="onDetallesChange($event)"
+  (totalChange)="onTotalChange($event)"
+  (clienteGlobalChange)="onClienteGlobalChange($event)"
+  (tipoClienteChange)="onTipoClienteChange($event)"
+></app-multi-servicio-selector>
     </div>
 
     <!-- Pago Inicial y Prioridad -->

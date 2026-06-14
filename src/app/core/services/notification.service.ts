@@ -275,109 +275,113 @@ private getPlataforma(): string {
  * Dispara a la hora exacta y también con la anticipación configurada.
  * ✅ Versión MEJORADA con soporte para push desde backend
  */
+// notification.service.ts - ACTUALIZAR para usar múltiples servicios
+
 async programarNotificacionOrden(orden: {
   id: number | string;
   id_externo: string;
-  fecha_limite: string;
-  hora_limite?: string;
+  detalles?: Array<{
+    id: number;
+    servicio?: { nombre: string };
+    fecha_limite: string;
+    hora_limite?: string;
+    cliente_nombre?: string;
+    detalle_cliente?: string;
+  }>;
   doctor?: { nombre: string };
-  servicio?: { nombre: string };
   cliente_nombre?: string;
+  detalle_cliente?: string;
 }): Promise<ResultadoProgramacion> {
-  if (!orden.fecha_limite) {
-    return { programadas: 0, mensaje: 'La orden no tiene fecha límite' };
+  
+  if (!orden.detalles || orden.detalles.length === 0) {
+    return { programadas: 0, mensaje: 'La orden no tiene servicios' };
   }
-
-  const horaStr = orden.hora_limite || '08:00';
-  const fechaHora = new Date(`${orden.fecha_limite}T${horaStr}`);
-
-  if (isNaN(fechaHora.getTime())) {
-    return { programadas: 0, mensaje: 'Fecha/hora inválida' };
-  }
-
-  if (fechaHora <= new Date()) {
-    return { programadas: 0, mensaje: 'La fecha/hora de la orden ya pasó' };
-  }
-
+  
   const doctor = orden.doctor?.nombre ?? 'Doctor';
-  const servicio = orden.servicio?.nombre ?? 'Servicio';
-  const cliente = orden.cliente_nombre ? ` | ${orden.cliente_nombre}` : '';
-  const cuerpo = `${doctor} — ${servicio}${cliente}`;
-  const idBase = `orden-${orden.id}`;
   let programadas = 0;
-
-  // ── Notificación a la hora exacta (frontend) ──
-  const ok1 = this.programarNotificacion(
-    `${idBase}-exacta`,
-    `📋 Orden ${orden.id_externo} — ¡Hora límite!`,
-    `⏰ Vence AHORA: ${cuerpo}`,
-    fechaHora,
-    0
-  );
-  if (ok1) programadas++;
-
-  // ── Notificación anticipada según config (frontend) ──
-  const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
-  const ok2 = this.programarNotificacion(
-    `${idBase}-anticipada`,
-    `⚠️ Orden ${orden.id_externo} — Vence en ${leadMin < 60 ? leadMin + ' min' : Math.floor(leadMin / 60) + ' h'}`,
-    cuerpo,
-    fechaHora,
-    leadMin
-  );
-  if (ok2) programadas++;
-
-  // ── Notificación 30 min antes (si la anticipación no es ya 30 min) ──
-  if (leadMin !== 30) {
-    const fechaHora30 = new Date(fechaHora.getTime() - 30 * 60_000);
-    if (fechaHora30 > new Date()) {
+  const mensajes: string[] = [];
+  
+  // ✅ Programar notificación para CADA servicio
+  for (const detalle of orden.detalles) {
+    if (!detalle.fecha_limite) continue;
+    
+    const horaStr = detalle.hora_limite || '08:00';
+    const fechaHora = new Date(`${detalle.fecha_limite}T${horaStr}`);
+    
+    if (isNaN(fechaHora.getTime()) || fechaHora <= new Date()) continue;
+    
+    const servicio = detalle.servicio?.nombre ?? 'Servicio';
+    const cliente = detalle.cliente_nombre ?? orden.cliente_nombre;
+    const clienteTexto = cliente ? ` | ${cliente}` : '';
+    const detalleTexto = detalle.detalle_cliente ? ` (${detalle.detalle_cliente.substring(0, 30)})` : '';
+    
+    const cuerpo = `${doctor} — ${servicio}${clienteTexto}${detalleTexto}`;
+    const idBase = `orden-${orden.id}-servicio-${detalle.id}`;
+    
+    // Notificación a la hora exacta
+    const ok1 = this.programarNotificacion(
+      `${idBase}-exacta`,
+      `📋 Orden ${orden.id_externo} — ¡Hora límite!`,
+      `⏰ Vence AHORA: ${cuerpo}`,
+      fechaHora,
+      0
+    );
+    if (ok1) programadas++;
+    
+    // Notificación anticipada
+    const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
+    const ok2 = this.programarNotificacion(
+      `${idBase}-anticipada`,
+      `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en ${leadMin} min`,
+      cuerpo,
+      fechaHora,
+      leadMin
+    );
+    if (ok2) programadas++;
+    
+    // Notificación 30 min antes (si es diferente)
+    if (leadMin !== 30) {
       const ok3 = this.programarNotificacion(
         `${idBase}-30min`,
-        `⚠️ Orden ${orden.id_externo} — Vence en 30 min`,
+        `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en 30 min`,
         cuerpo,
         fechaHora,
         30
       );
       if (ok3) programadas++;
     }
+    
+    mensajes.push(`${servicio}: ${fechaHora.toLocaleString('es-PE')}`);
   }
-
-  // ✅ NUEVO: Programar notificaciones push en el backend (para app cerrada)
-  const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
   
-  if (this.tokenFcm && ordenIdNumerico > 0) {
-    try {
-      // Programar push en backend para anticipación
-      await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
-        ordenId: ordenIdNumerico,
-        minutosAntes: leadMin
-      }).toPromise();
-      console.log(`[Notif] 📨 Push programado en backend (${leadMin} min antes)`);
-      
-      // Programar push en backend para hora exacta
-      await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
-        ordenId: ordenIdNumerico,
-        minutosAntes: 0
-      }).toPromise();
-      console.log(`[Notif] 📨 Push programado en backend (hora exacta)`);
-    } catch (error) {
-      console.error('[Notif] Error programando push en backend:', error);
+  // ✅ Programar push en backend para cada servicio
+  if (this.tokenFcm && orden.id) {
+    const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
+    
+    if (ordenIdNumerico > 0) {
+      try {
+        // Enviar todos los detalles al backend
+        await this.http.post(`${environment.apiUrl}/notificaciones/programar-orden-completa`, {
+          ordenId: ordenIdNumerico,
+          detalles: orden.detalles.map(d => ({
+            id: d.id,
+            fecha_limite: d.fecha_limite,
+            hora_limite: d.hora_limite,
+            servicio_nombre: d.servicio?.nombre
+          }))
+        }).toPromise();
+        console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend`);
+      } catch (error) {
+        console.error('[Notif] Error programando push en backend:', error);
+      }
     }
   }
-
-  let mensaje: string;
-  if (programadas === 0) {
-    mensaje = 'No se pudo programar ninguna notificación';
-  } else if (programadas === 1) {
-    mensaje = 'Notificación programada para la hora exacta';
-  } else {
-    mensaje = `${programadas} notificaciones programadas (hora exacta + anticipación)`;
+  
+  let mensaje = `${programadas} notificación(es) programadas para ${orden.detalles.length} servicio(s)`;
+  if (programadas > 0 && mensajes.length > 0) {
+    mensaje += `: ${mensajes.join(', ')}`;
   }
-
-  if (this.tokenFcm && ordenIdNumerico > 0) {
-    mensaje += ' + push en segundo plano';
-  }
-
+  
   return { programadas, mensaje };
 }
 

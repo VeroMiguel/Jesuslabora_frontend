@@ -144,7 +144,8 @@ ngOnInit() {
   );
 }
 
-// Nuevo método para cargar órdenes después de tener la fecha
+// ordenes.component.ts - MODIFICAR cargarOrdenesConFecha
+
 private cargarOrdenesConFecha() {
   this.subscriptions.push(
     this.ordenService.getOrdenes().subscribe({
@@ -152,18 +153,8 @@ private cargarOrdenesConFecha() {
         this.ordenes = data;
         console.log('📋 Órdenes cargadas:', this.ordenes.length);
         
-        // Log para depurar la orden #14
-        const orden14 = this.ordenes.find(o => o.id === 14);
-        if (orden14) {
-          console.log('🔍 Orden #14:', {
-            id: orden14.id,
-            fecha_limite: orden14.fecha_limite,
-            fechaServidor: this.fechaServidorHoy,
-            saldo: this.calcularSaldo(orden14),
-            isVencida: this.isVencida(orden14),
-            estado: orden14.estado
-          });
-        }
+        // ✅ Guardar en caché para futuros errores
+        this.guardarOrdenesEnCache(data);
         
         this.extraerOpcionesFiltros();
         this.filtrarOrdenes();
@@ -171,10 +162,28 @@ private cargarOrdenesConFecha() {
       },
       error: (error) => {
         console.error('Error cargando órdenes:', error);
+        
+        // ✅ Intentar recuperar desde caché local
+        if (error.status === 503 || error.status === 0) {
+          console.warn('⚠️ Backend no disponible, usando datos cacheados');
+          const cachedOrders = localStorage.getItem('ordenes_cache');
+          if (cachedOrders) {
+            this.ordenes = JSON.parse(cachedOrders);
+            this.extraerOpcionesFiltros();
+            this.filtrarOrdenes();
+          } else {
+            console.warn('⚠️ No hay datos en caché');
+          }
+        }
         this.cargando = false;
       }
     })
   );
+}
+
+// Guardar órdenes en caché cuando se cargan correctamente
+private guardarOrdenesEnCache(ordenes: any[]) {
+  localStorage.setItem('ordenes_cache', JSON.stringify(ordenes));
 }
 
   ngOnDestroy() {

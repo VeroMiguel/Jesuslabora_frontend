@@ -10,19 +10,20 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
   imports: [CommonModule, FormsModule, ImagenPipe],
   template: `
     <div class="searchable-select">
-      <div class="select-display" [class.open]="abierto" (click)="abrirDropdown()">
+      <!-- searchable-select.component.html - Modificar -->
+      <div class="select-display" [class.open]="abierto" (click)="toggleDropdown()">
         <input
           type="text"
           [(ngModel)]="textoBusqueda"
           (ngModelChange)="filtrarOpciones()"
-          (focus)="abrirDropdown()"
+          (focus)="toggleDropdown()"
           (blur)="onInputBlur()"
           [placeholder]="placeholder"
           [disabled]="disabled"
           class="select-input"
           #inputElement
         >
-        <i class="fas fa-chevron-down" [class.rotated]="abierto"></i>
+        <i class="fas fa-chevron-down" [class.rotated]="abierto" (click)="$event.stopPropagation()"></i>
       </div>
 
       <div class="select-dropdown" *ngIf="abierto" (mousedown)="$event.preventDefault()">
@@ -344,14 +345,29 @@ export class SearchableSelectComponent implements ControlValueAccessor {
     }
   }
 
-  // ✅ Abrir dropdown (siempre abre, no alterna)
-  abrirDropdown() {
-    if (!this.disabled && !this.abierto) {
-      this.abierto = true;
+// searchable-select.component.ts - MODIFICAR abrirDropdown
+
+// ✅ Cambiar a toggle (alternar)
+toggleDropdown(event?: Event) {
+  if (event) {
+    event.stopPropagation();
+  }
+  if (!this.disabled) {
+    this.abierto = !this.abierto;
+    if (this.abierto) {
       this.filtrarOpciones();
+      // Enfocar el input al abrir
+      setTimeout(() => {
+        this.inputElement?.nativeElement?.focus();
+      }, 50);
     }
   }
+}
 
+// Mantener abrirDropdown para compatibilidad (opcional)
+abrirDropdown() {
+  this.toggleDropdown();
+}
   cerrarDropdown() {
     this.abierto = false;
     this.onTouched();

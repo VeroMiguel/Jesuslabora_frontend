@@ -88,19 +88,26 @@
           <textarea [(ngModel)]="detalle.detalle_cliente" placeholder="Detalle del caso (opcional)" rows="1" class="detalle-input-servicio"></textarea>
         </div>
 
-        <!-- Imagen de referencia -->
-        <div class="imagen-servicio">
-          <div class="imagen-upload" *ngIf="!detalle.imagen_preview">
-            <button type="button" class="btn-subir-imagen" (click)="abrirSelectorImagen(i)">
-              <i class="fas fa-image"></i> Subir imagen
-            </button>
-          </div>
-          <div class="imagen-preview" *ngIf="detalle.imagen_preview">
-            <img [src]="detalle.imagen_preview" (click)="verImagen(detalle.imagen_preview)">
-            <button type="button" class="btn-remove-img" (click)="removerImagen(i)">×</button>
-          </div>
-          <span class="imagen-hint" *ngIf="detalle.imagen_nombre">{{ detalle.imagen_nombre }}</span>
-        </div>
+       <!-- multi-servicio-selector.component.html - Modificar sección de imagen preview -->
+<div class="imagen-servicio">
+  <div class="imagen-upload" *ngIf="!detalle.imagen_preview">
+    <button type="button" class="btn-subir-imagen" (click)="abrirSelectorImagen(i)">
+      <i class="fas fa-image"></i> Subir imagen
+    </button>
+  </div>
+  
+  <!-- ✅ Usar SweetAlert2 al hacer clic en la imagen (misma lógica que en detalle) -->
+  <div class="imagen-preview" *ngIf="detalle.imagen_preview">
+    <img 
+      [src]="detalle.imagen_preview | imagen" 
+      (click)="verImagenServicio(detalle.imagen_url || detalle.imagen_preview)"
+      class="preview-thumbnail"
+      title="Ver imagen de referencia"
+    >
+    <button type="button" class="btn-remove-img" (click)="removerImagen(i); $event.stopPropagation()">×</button>
+  </div>
+  <span class="imagen-hint" *ngIf="detalle.imagen_nombre">{{ detalle.imagen_nombre }}</span>
+</div>
       </div>
     </div>
   </div>

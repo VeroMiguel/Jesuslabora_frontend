@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+// image-zoom.component.ts - VERSIÓN SIMPLIFICADA Y CORREGIDA
+import { Component, Input, HostListener, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ImagenPipe } from '../../pipes/imagen.pipe';
 
@@ -19,7 +20,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       </div>
     </div>
 
-    <!-- Modal para zoom - Mejorado para pantalla completa -->
+    <!-- Modal para zoom - SIMPLIFICADO -->
     <div class="zoom-modal" *ngIf="showZoom" (click)="closeZoom()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <button class="close-button" (click)="closeZoom()">
@@ -28,9 +29,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
         <div class="image-container">
           <img [src]="src | imagen:defaultImage" 
                [alt]="alt"
-               class="zoomed-image"
-               (load)="onImageLoaded()"
-               [class.portrait]="isPortrait">
+               class="zoomed-image">
         </div>
         <div class="image-caption" *ngIf="alt">
           {{ alt }}
@@ -98,7 +97,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       transform: scale(1.05);
     }
 
-    /* Modal styles - MEJORADO PARA PANTALLA COMPLETA */
+    /* Modal SIMPLIFICADO - Sin límites dinámicos */
     .zoom-modal {
       position: fixed;
       top: 0;
@@ -149,33 +148,26 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       transform: scale(1.1);
     }
 
-    .close-button:active {
-      transform: scale(0.95);
-    }
-
     .image-container {
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 60px 20px 80px 20px;
+      overflow: auto;
+      padding: 80px 20px;
     }
 
+    /* Imagen sin límites forzados - solo con CSS puro */
     .zoomed-image {
-      max-width: 95%;
-      max-height: 90vh;
+      display: block;
+      max-width: 90vw;
+      max-height: 85vh;
       width: auto;
       height: auto;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-      transition: transform 0.2s ease;
-    }
-
-    .zoomed-image.portrait {
-      max-height: 85vh;
-      width: auto;
     }
 
     .image-caption {
@@ -196,6 +188,26 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       pointer-events: none;
     }
 
+    /* Scrollbar estilizada */
+    .image-container::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .image-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .image-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    .image-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -209,20 +221,14 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
         width: 44px;
         height: 44px;
         font-size: 1.2rem;
-        background: rgba(0, 0, 0, 0.7);
-        border: 2px solid white;
       }
 
       .image-container {
-        padding: 70px 16px 70px 16px;
+        padding: 70px 16px;
       }
 
       .zoomed-image {
-        max-width: 100%;
-        max-height: 85vh;
-      }
-
-      .zoomed-image.portrait {
+        max-width: 95vw;
         max-height: 80vh;
       }
 
@@ -251,62 +257,54 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       }
 
       .image-container {
-        padding: 60px 12px 60px 12px;
+        padding: 60px 12px;
       }
 
       .zoomed-image {
-        max-height: 80vh;
+        max-height: 75vh;
       }
     }
   `]
 })
-export class ImageZoomComponent {
+export class ImageZoomComponent implements OnDestroy {
   @Input() src: string = '';
   @Input() alt: string = '';
   @Input() defaultImage: string = 'assets/images/default-image.png';
   
   showZoom = false;
-  isPortrait = false;
 
-  
+  constructor() {
+    document.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  ngOnDestroy() {
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.closeZoom();
+  }
+
+  private handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && this.showZoom) {
+      this.closeZoom();
+    }
+  }
 
   closeZoom() {
     this.showZoom = false;
     document.body.style.overflow = '';
-  }
-
-  onImageLoaded() {
-    const img = document.querySelector('.zoomed-image') as HTMLImageElement;
-    if (img) {
-      this.isPortrait = img.naturalHeight > img.naturalWidth;
-    }
+    document.body.style.position = '';
+    document.body.style.width = '';
   }
 
   onImageError() {
-    console.log('Error cargando imagen:', this.src);
+    console.warn('Error cargando imagen:', this.src);
   }
 
-
-openZoom() {
-  if (this.src) {
-    this.showZoom = true;
-
-    // 🔥 MOVER EL MODAL AL BODY
-    setTimeout(() => {
-      const modal = document.querySelector('.zoom-modal');
-      if (modal) {
-        document.body.appendChild(modal);
-      }
-    });
-
-    document.body.style.overflow = 'hidden';
+  openZoom() {
+    if (this.src) {
+      this.showZoom = true;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    }
   }
-}
-
-
-
-
-
-
-
 }

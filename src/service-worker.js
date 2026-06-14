@@ -134,38 +134,57 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// service-worker.js - Reemplazar la sección de fetch
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // No cachear API ni Firebase
-  if (url.pathname.startsWith('/api')) return;
-  if (url.hostname.includes('firebase') || url.hostname.includes('google')) return;
-  if (event.request.method !== 'GET') return;
+  // ✅ NO interceptar peticiones a la API
+  if (url.pathname.startsWith('/api')) {
+    return;
+  }
   
+  // ✅ NO interceptar peticiones a Firebase
+  if (url.hostname.includes('firebase') || url.hostname.includes('google')) {
+    return;
+  }
+  
+  // ✅ Solo cachear assets estáticos en GET
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // ✅ Para navegación (cambios de ruta), siempre ir a la red
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
+    );
+    return;
+  }
+  
+  // ✅ Para assets estáticos, usar estrategia cache-first
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
+    caches.match(event.request).then((cached) => {
+      if (cached) {
+        return cached;
+      }
+      return fetch(event.request).then((response) => {
         if (response.ok && (
           url.pathname.endsWith('.js') ||
           url.pathname.endsWith('.css') ||
           url.pathname.endsWith('.ico') ||
           url.pathname.endsWith('.png') ||
+          url.pathname.endsWith('.jpg') ||
           url.pathname.endsWith('.woff2')
         )) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
         return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then(cached => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/');
-          }
-          return new Response('', { status: 503, statusText: 'Service Unavailable' });
-        });
-      })
+      });
+    })
   );
 });
 

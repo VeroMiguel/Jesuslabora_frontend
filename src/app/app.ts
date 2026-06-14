@@ -7,7 +7,7 @@ import { SessionService } from './core/services/session.service';
 import { NotificationService } from './core/services/notification.service';
 import { FirebaseMessagingService } from './core/services/firebase-messaging.service';
 import { SessionTimeoutComponent } from './shared/components/session-timeout/session-timeout.component';
-
+import { environment } from '../environments/environment';  // ✅ AGREGAR ESTA LÍNEA
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -28,7 +28,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private authSubscription?: Subscription;
   private originalOverflow: string = '';
   
-  constructor(
+  // app.ts - Modificar el constructor
+
+constructor(
     public authService: AuthService,
     private renderer: Renderer2,
     private router: Router,
@@ -41,12 +43,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.registrarServiceWorker();
 
-    this.fcmService.initialize().then(() => {
-      console.log('[App] Firebase Messaging inicializado');
-    });
+    // ✅ Solo inicializar FCM en producción
+    if (environment.production && environment.enableFirebase !== false) {
+        this.fcmService.initialize().then(() => {
+            console.log('[App] Firebase Messaging inicializado');
+        });
+    } else {
+        console.log('[App] Firebase Messaging deshabilitado en desarrollo');
+    }
     
     this.solicitarPermisosIniciales();
-  }
+}
 
   ngOnInit() {
     this.registrarServiceWorker();
@@ -81,15 +88,23 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private registrarServiceWorker(): void {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').then(reg => {
-        console.log('[App] Service Worker registrado:', reg.scope);
-      }).catch(err => {
-        console.warn('[App] Error registrando Service Worker:', err);
-      });
+// app.ts - Modificar el método registrarServiceWorker
+
+private registrarServiceWorker(): void {
+    // ✅ Solo registrar SW en producción, no en desarrollo local
+    if (!environment.production) {
+        console.log('[App] Service Worker deshabilitado en modo desarrollo');
+        return;
     }
-  }
+    
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').then(reg => {
+            console.log('[App] Service Worker registrado:', reg.scope);
+        }).catch(err => {
+            console.warn('[App] Error registrando Service Worker:', err);
+        });
+    }
+}
 
   ngOnDestroy() {
     this.authSubscription?.unsubscribe();

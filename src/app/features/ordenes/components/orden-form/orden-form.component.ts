@@ -111,26 +111,38 @@ export class OrdenFormComponent implements OnInit {
     });
   }
 
-  cargarOrden() {
-    if (!this.ordenId) return;
-    
-    this.ordenService.getOrden(this.ordenId).subscribe({
-      next: (orden) => {
-        const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
-        
-        // Cargar cliente global si existe
-        if (orden.cliente_nombre) {
-          this.clienteGlobal = {
-            nombre: orden.cliente_nombre,
-            detalle: orden.detalle_cliente || ''
-          };
-          this.tipoCliente = 'unico';
-        } else if (orden.detalles?.some((d: any) => d.cliente_nombre)) {
-          this.tipoCliente = 'multiple';
-        }
-        
-        if (orden.detalles && orden.detalles.length > 0) {
-          this.detallesIniciales = orden.detalles.map((det: any) => ({
+ // orden-form.component.ts - MODIFICAR cargarOrden()
+// orden-form.component.ts - MODIFICAR cargarOrden()
+cargarOrden() {
+  if (!this.ordenId) return;
+  
+  this.ordenService.getOrden(this.ordenId).subscribe({
+    next: (orden) => {
+      const totalPagado = orden.pagos?.reduce((sum, pago) => sum + Number(pago.monto), 0) || 0;
+      
+      // ✅ Cargar cliente global si existe en la orden
+      if (orden.cliente_nombre) {
+        this.clienteGlobal = {
+          nombre: orden.cliente_nombre,
+          detalle: orden.detalle_cliente || ''
+        };
+        this.tipoCliente = 'unico';
+      } 
+      else if (orden.detalles?.some((d: any) => d.cliente_nombre)) {
+        this.tipoCliente = 'multiple';
+        this.clienteGlobal = { nombre: '', detalle: '' };
+      }
+      
+      if (orden.detalles && orden.detalles.length > 0) {
+        this.detallesIniciales = orden.detalles.map((det: any) => {
+          // ✅ IMPORTANTE: Convertir la URL a preview usando el pipe
+          let previewUrl = det.imagen_referencia_url;
+          if (previewUrl && !previewUrl.startsWith('http') && !previewUrl.startsWith('data:')) {
+            const baseUrl = environment.apiUrl.replace('/api', '');
+            previewUrl = `${baseUrl}${previewUrl}`;
+          }
+          
+          return {
             id: det.id,
             servicio_id: det.servicio_id,
             servicio_nombre: det.servicio?.nombre || '',
@@ -140,28 +152,32 @@ export class OrdenFormComponent implements OnInit {
             cliente_nombre: det.cliente_nombre || '',
             detalle_cliente: det.detalle_cliente || '',
             imagen_url: det.imagen_referencia_url || '',
-            imagen_preview: det.imagen_referencia_url || ''
-          }));
-        }
-        
-        this.ordenForm.patchValue({
-          doctor_id: orden.doctor_id,
-          total: orden.total,
-          pago_inicial: totalPagado,
-          prioridad: orden.prioridad
+            imagen_preview: previewUrl  // ← Usar URL completa
+          };
         });
-        
-        setTimeout(() => {
-          this.cdr.detectChanges();
-        }, 100);
-      },
-      error: (error) => {
-        console.error('Error cargando orden:', error);
-        Swal.fire('Error', 'No se pudo cargar la orden', 'error');
       }
-    });
-  }
-
+      
+      this.ordenForm.patchValue({
+        doctor_id: orden.doctor_id,
+        total: orden.total,
+        pago_inicial: totalPagado,
+        prioridad: orden.prioridad
+      });
+      
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        if (this.multiServicioSelector) {
+          this.multiServicioSelector.tipoCliente = this.tipoCliente;
+          this.multiServicioSelector.clienteUnico = { ...this.clienteGlobal };
+        }
+      }, 100);
+    },
+    error: (error) => {
+      console.error('Error cargando orden:', error);
+      Swal.fire('Error', 'No se pudo cargar la orden', 'error');
+    }
+  });
+}
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
@@ -193,38 +209,39 @@ export class OrdenFormComponent implements OnInit {
     this.previewUrl = null;
   }
 
-  async onSubmit() {
+ // orden-form.component.ts - MODIFICAR onSubmit()
+async onSubmit() {
     const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
     
     if (detallesValidos.length === 0) {
-      Swal.fire('Error', 'Debe agregar al menos un servicio válido', 'error');
-      return;
+        Swal.fire('Error', 'Debe agregar al menos un servicio válido', 'error');
+        return;
     }
     
     if (!this.ordenForm.valid) {
-      Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
-      return;
+        Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
+        return;
     }
     
     const formValue = this.ordenForm.value;
-    
-    // Obtener cliente global del componente hijo
     const clienteGlobal = this.multiServicioSelector?.clienteUnico || { nombre: '', detalle: '' };
     
+    // ✅ Incluir imagen_url existente en los detalles
     const datosParaEnviar = {
-      doctor_id: formValue.doctor_id,
-      detalles: detallesValidos.map((d: any) => ({
-        servicio_id: d.servicio_id,
-        precio_unitario: Number(d.precio_unitario),
-        fecha_limite: d.fecha_limite || null,
-        hora_limite: d.hora_limite || null,
-        cliente_nombre: this.tipoCliente === 'multiple' ? (d.cliente_nombre || null) : null,
-        detalle_cliente: this.tipoCliente === 'multiple' ? (d.detalle_cliente || null) : null
-      })),
-      pago_inicial: Number(formValue.pago_inicial) || 0,
-      prioridad: formValue.prioridad,
-      cliente_nombre: this.tipoCliente === 'unico' ? (clienteGlobal.nombre || null) : null,
-      detalle_cliente: this.tipoCliente === 'unico' ? (clienteGlobal.detalle || null) : null
+        doctor_id: formValue.doctor_id,
+        detalles: detallesValidos.map((d: any) => ({
+            servicio_id: d.servicio_id,
+            precio_unitario: Number(d.precio_unitario),
+            fecha_limite: d.fecha_limite || null,
+            hora_limite: d.hora_limite || null,
+            cliente_nombre: this.tipoCliente === 'multiple' ? (d.cliente_nombre || null) : null,
+            detalle_cliente: this.tipoCliente === 'multiple' ? (d.detalle_cliente || null) : null,
+            imagen_referencia_url: d.imagen_url || null  // ✅ Enviar URL existente
+        })),
+        pago_inicial: Number(formValue.pago_inicial) || 0,
+        prioridad: formValue.prioridad,
+        cliente_nombre: this.tipoCliente === 'unico' ? (clienteGlobal.nombre || null) : null,
+        detalle_cliente: this.tipoCliente === 'unico' ? (clienteGlobal.detalle || null) : null
     };
     
     console.log('📤 Enviando orden:', JSON.stringify(datosParaEnviar, null, 2));
@@ -232,35 +249,37 @@ export class OrdenFormComponent implements OnInit {
     this.subiendoImagen = true;
     
     const ordenServiceMethod = this.esEdicion && this.ordenId 
-      ? this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar)
-      : this.ordenService.crearOrden(datosParaEnviar);
+        ? this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar)
+        : this.ordenService.crearOrden(datosParaEnviar);
     
     ordenServiceMethod.subscribe({
-      next: async (respuesta: any) => {
-        const ordenCreada = respuesta.orden || respuesta;
-        const ordenId = ordenCreada.id;
-        
-        if (ordenId && this.detallesIniciales) {
-          for (let i = 0; i < this.detallesIniciales.length; i++) {
-            const detalle = this.detallesIniciales[i];
-            if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
-              const detalleId = ordenCreada.detalles[i].id;
-              await this.subirImagenDetalle(detalleId, detalle.imagen_file);
+        next: async (respuesta: any) => {
+            const ordenCreada = respuesta.orden || respuesta;
+            const ordenId = ordenCreada.id;
+            
+            // ✅ Subir NUEVAS imágenes (solo las que son archivos nuevos)
+            if (ordenId && this.detallesIniciales) {
+                for (let i = 0; i < this.detallesIniciales.length; i++) {
+                    const detalle = this.detallesIniciales[i];
+                    // ✅ Solo subir si es un archivo NUEVO (no una URL existente)
+                    if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
+                        const detalleId = ordenCreada.detalles[i].id;
+                        await this.subirImagenDetalle(detalleId, detalle.imagen_file);
+                    }
+                }
             }
-          }
+            
+            this.subiendoImagen = false;
+            Swal.fire('¡Éxito!', `Orden ${this.esEdicion ? 'actualizada' : 'creada'} correctamente`, 'success');
+            this.router.navigate(['/ordenes']);
+        },
+        error: (error: any) => {
+            this.subiendoImagen = false;
+            console.error('Error:', error);
+            Swal.fire('Error', error.error?.error || error.error?.details || 'No se pudo procesar la orden', 'error');
         }
-        
-        this.subiendoImagen = false;
-        Swal.fire('¡Éxito!', `Orden ${this.esEdicion ? 'actualizada' : 'creada'} correctamente`, 'success');
-        this.router.navigate(['/ordenes']);
-      },
-      error: (error: any) => {
-        this.subiendoImagen = false;
-        console.error('Error:', error);
-        Swal.fire('Error', error.error?.error || error.error?.details || 'No se pudo procesar la orden', 'error');
-      }
     });
-  }
+}
 
   async subirImagenDetalle(detalleId: number, file: File): Promise<void> {
     try {

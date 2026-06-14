@@ -12,8 +12,8 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import Swal from 'sweetalert2';
 import { ImagenPipe } from '../../../../shared/pipes/imagen.pipe';
 import { WhatsAppService } from '../../../../core/services/whatsapp.service';
-import { ImageZoomComponent } from '../../../../shared/components/image-zoom/image-zoom.component';
 import { ServicioService } from '../../../../core/services/servicio.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-orden-detalle',
@@ -26,7 +26,6 @@ import { ServicioService } from '../../../../core/services/servicio.service';
     LoadingSpinnerComponent, 
     ImagenPipe, 
     HoraPipe,
-    ImageZoomComponent
   ],
   templateUrl: './orden-detalle.component.html',
   styleUrls: ['./orden-detalle.component.css'],
@@ -625,13 +624,70 @@ isDetalleVencido(detalle: any): boolean {
 }
 // orden-detalle.component.ts - AGREGAR ESTE MÉTODO
 
-verImagenServicio(url: string) {
-  Swal.fire({
-    imageUrl: url,
-    imageAlt: 'Imagen de referencia del servicio',
-    width: 'auto',
-    showConfirmButton: true,
-    confirmButtonText: 'Cerrar'
+// orden-detalle.component.ts - CORREGIR verImagenServicio
+
+async verImagenServicio(url: string) {
+  // ✅ Asegurar que la URL sea completa
+  let imagenUrl = url;
+  if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+    const baseUrl = environment.apiUrl.replace('/api', '');
+    imagenUrl = `${baseUrl}${url}`;
+  }
+  
+  console.log('🔍 Mostrando imagen:', imagenUrl);
+  
+  // ✅ Crear un elemento de imagen temporal para obtener dimensiones
+  const img = new Image();
+  img.src = imagenUrl;
+  
+  await new Promise((resolve) => {
+    img.onload = resolve;
+    img.onerror = resolve;
   });
+  
+  // ✅ Calcular dimensiones máximas (80% de la pantalla)
+  const maxWidth = window.innerWidth * 0.8;
+  const maxHeight = window.innerHeight * 0.8;
+  
+  let imageWidth = img.width;
+  let imageHeight = img.height;
+  
+  // ✅ Si la imagen es más grande que la pantalla, escalarla
+  if (imageWidth > maxWidth || imageHeight > maxHeight) {
+    const ratio = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
+    imageWidth = imageWidth * ratio;
+    imageHeight = imageHeight * ratio;
+  }
+  
+  try {
+    await Swal.fire({
+      imageUrl: imagenUrl,
+      imageAlt: 'Imagen de referencia del servicio',
+      width: `${imageWidth + 40}px`,  // +40 para padding del modal
+      showConfirmButton: true,
+      confirmButtonText: 'Cerrar',
+      imageWidth: `${imageWidth}px`,
+      imageHeight: `${imageHeight}px`,
+      backdrop: true,
+      allowOutsideClick: true,
+      customClass: {
+        image: 'servicio-imagen-modal'
+      }
+    });
+  } catch (err) {
+    console.error('Error mostrando imagen:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'No se pudo cargar la imagen'
+    });
+  }
 }
+
+onImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  img.src = 'assets/images/default-image.png';
+  console.warn('Error cargando imagen, usando default');
+}
+
 }

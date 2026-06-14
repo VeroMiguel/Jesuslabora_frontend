@@ -50,12 +50,14 @@
     </div>
   </div>
   
-  <div class="calendario-wrapper">
+<!-- calendario-filtro.component.html - Agregar #fullCalendar -->
+<div class="calendario-wrapper">
     <full-calendar
-      [options]="calendarOptions"
-      (click)="onDateClick($event)"
+        #fullCalendar
+        [options]="calendarOptions"
+        (click)="onDateClick($event)"
     ></full-calendar>
-  </div>
+</div>
   
   <div *ngIf="cargando" class="loading-overlay">
     <div class="spinner"></div>

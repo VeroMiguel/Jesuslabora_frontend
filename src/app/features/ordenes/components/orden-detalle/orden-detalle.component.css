@@ -1133,3 +1133,54 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--bor, #e2e8f0);
 }
+/* Estilos para cliente y detalle por servicio */
+.servicio-cliente-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-left: auto;
+  text-align: right;
+}
+
+.servicio-cliente {
+  font-size: 0.7rem;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.servicio-detalle {
+  font-size: 0.65rem;
+  color: var(--mut, #64748b);
+  background: var(--in, #f8fafc);
+  padding: 2px 6px;
+  border-radius: 8px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .servicio-detalle-item {
+    flex-wrap: wrap;
+  }
+  
+  .servicio-cliente-info {
+    margin-left: 0;
+    text-align: left;
+    width: 100%;
+    padding-left: 28px;
+  }
+  
+  .servicio-detalle {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+}

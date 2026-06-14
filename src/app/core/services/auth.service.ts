@@ -36,9 +36,17 @@ export class AuthService {
     }
   }
 
-  private verificarTokenEnBackend(token: string) {
+// auth.service.ts - Modificar verificarTokenEnBackend
+
+private verificarTokenEnBackend(token: string) {
     if (!token) {
         console.warn('⚠️ No hay token para verificar');
+        this.authLoadingSubject.next(false);
+        return;
+    }
+    
+    // ✅ Si ya estamos en /login, no verificar
+    if (this.router.url === '/login') {
         this.authLoadingSubject.next(false);
         return;
     }
@@ -51,35 +59,37 @@ export class AuthService {
     console.log('🔍 Verificando token...');
     
     this.http.get(`${this.apiUrl}/verificar`, { headers }).pipe(
-      timeout(10000),
-      catchError((error) => {
-          if (error.status !== 401) {
-              console.error('❌ Error verificando token:', error.status);
-          }
-          
-          if (error.status === 401) {
-              console.error('❌ Token inválido o expirado');
-              this.logoutSilently();
-          } else {
-              console.warn('⚠️ Error de red, manteniendo sesión local');
-          }
-          return of(null);
-      }),
-      finalize(() => {
-          this.authLoadingSubject.next(false);
-      })
+        timeout(5000), // Reducir timeout a 5 segundos
+        catchError((error) => {
+            // ✅ Si el backend no responde (503), mantener sesión local
+            if (error.status === 503 || error.status === 0) {
+                console.warn('⚠️ Backend no disponible, manteniendo sesión local');
+                return of({ valido: true, usuario: JSON.parse(localStorage.getItem('user') || '{}') });
+            }
+            
+            if (error.status === 401) {
+                console.error('❌ Token inválido o expirado');
+                this.logoutSilently();
+            } else if (error.status !== 404) {
+                console.warn(`⚠️ Error ${error.status}, manteniendo sesión local`);
+            }
+            return of(null);
+        }),
+        finalize(() => {
+            this.authLoadingSubject.next(false);
+        })
     ).subscribe({
-      next: (response: any) => {
-        if (response && response.valido) {
-          console.log('✅ Token válido');
-          if (response.usuario) {
-            this.currentUserSubject.next(response.usuario);
-            localStorage.setItem('user', JSON.stringify(response.usuario));
-          }
+        next: (response: any) => {
+            if (response && response.valido) {
+                console.log('✅ Token válido');
+                if (response.usuario) {
+                    this.currentUserSubject.next(response.usuario);
+                    localStorage.setItem('user', JSON.stringify(response.usuario));
+                }
+            }
         }
-      }
     });
-  }
+}
 
   private logoutSilently() {
     console.log('🚪 Cerrando sesión silenciosamente');

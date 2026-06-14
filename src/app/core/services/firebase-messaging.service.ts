@@ -71,7 +71,16 @@ export class FirebaseMessagingService implements OnDestroy {
    * Inicializa Firebase y FCM. Llama a este método una sola vez desde AppComponent.
    * Es seguro llamarlo múltiples veces (idempotente).
    */
-  async initialize(): Promise<void> {
+// firebase-messaging.service.ts - Modificar initialize
+
+async initialize(): Promise<void> {
+    // ✅ No inicializar FCM en desarrollo local
+    if (!environment.production) {
+        console.log('[FCM] Firebase Messaging deshabilitado en modo desarrollo');
+        this.statusSubject.next('unsupported');
+        return;
+    }
+    
     if (this.statusSubject.value !== 'not-initialized') return;
 
     // Verificar soporte del navegador
