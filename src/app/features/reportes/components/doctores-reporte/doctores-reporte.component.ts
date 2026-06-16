@@ -202,4 +202,22 @@ aplicarFiltros() {
     });
     console.log('🧹 DoctoresReporteComponent destruido');
   }
+  // Agregar en DoctoresReporteComponent
+exportarDoctor(doctorId: number, doctorNombre: string) {
+    this.reporteService.exportarReportePorDoctor(doctorId).subscribe({
+        next: (blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `reporte_doctor_${doctorNombre.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+            Swal.fire('Éxito', `Reporte de ${doctorNombre} exportado correctamente`, 'success');
+        },
+        error: (error) => {
+            console.error('Error exportando reporte del doctor:', error);
+            Swal.fire('Error', 'No se pudo exportar el reporte del doctor', 'error');
+        }
+    });
+}
 }

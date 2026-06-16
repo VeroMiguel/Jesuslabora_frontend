@@ -763,3 +763,13 @@
     grid-column: span 2;
   }
 }
+/* doctores-reporte.component.css - Agregar */
+.btn-export-doctor {
+  background: #10b981;
+  color: white;
+  margin-left: 5px;
+}
+
+.btn-export-doctor:hover {
+  background: #059669;
+}

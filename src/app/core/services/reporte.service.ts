@@ -84,4 +84,11 @@ export class ReporteService {
   getTendenciaMensual(): Observable<any> {
     return this.http.get(`${this.apiUrl}/tendencia-mensual`);
   }
+
+// Exportar reporte por doctor específico
+exportarReportePorDoctor(doctorId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/exportar/doctor/${doctorId}`, {
+        responseType: 'blob'
+    });
+}
 }
