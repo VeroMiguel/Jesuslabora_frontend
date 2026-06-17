@@ -994,3 +994,149 @@
     min-width: 60px;
   }
 }
+/* configuracion.component.css - Agregar al final */
+
+/* Logo personalización */
+.logo-preview-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.logo-preview {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--bor, #e2e8f0);
+  background: var(--in, #f8fafc);
+}
+
+.logo-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.btn-remove-logo {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(244, 63, 94, 0.9);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-remove-logo:hover {
+  background: #f43f5e;
+  transform: scale(1.1);
+}
+
+.logo-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 16px;
+  background: var(--in, #f1f5f9);
+  border: 2px dashed var(--bor, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--mut, #64748b);
+}
+
+.logo-placeholder i {
+  font-size: 2rem;
+}
+
+.logo-placeholder span {
+  font-size: 0.7rem;
+}
+
+.logo-upload-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-upload-logo, .btn-save-logo {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+
+.btn-upload-logo {
+  background: var(--in, #f1f5f9);
+  border: 1px solid var(--bor, #e2e8f0);
+  color: var(--txt, #0f172a);
+}
+
+.btn-upload-logo:hover {
+  background: var(--bor, #e2e8f0);
+}
+
+.btn-save-logo {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+}
+
+.btn-save-logo:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-save-logo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upload-hint {
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  margin: 0;
+}
+
+.brand-icon {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+/* Dark mode */
+[data-theme="dark"] .logo-preview {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .logo-placeholder {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .btn-upload-logo {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-upload-logo:hover {
+  background: #334155;
+}

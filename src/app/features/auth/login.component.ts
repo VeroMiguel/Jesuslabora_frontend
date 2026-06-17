@@ -1,8 +1,11 @@
-import { Component } from '@angular/core';
+// login.component.ts - Agregar logo service
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { LogoService } from '../../core/services/logo.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -16,20 +19,35 @@ import Swal from 'sweetalert2';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit, OnDestroy {
   loginForm: FormGroup;
   hidePassword = true;
   isLoading = false;
+  logoUrl: string | null = null;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private logoService: LogoService
   ) {
     this.loginForm = this.fb.group({
       nombre_usuario: ['', Validators.required],
       contrasena: ['', Validators.required]
     });
+  }
+
+  ngOnInit() {
+    this.subscriptions.push(
+      this.logoService.logo$.subscribe(url => {
+        this.logoUrl = url;
+      })
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   onSubmit() {

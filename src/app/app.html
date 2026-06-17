@@ -6,11 +6,14 @@
 
 <!-- Navbar - Solo aparece DESPUÉS de verificar autenticación -->
 <ng-container *ngIf="!(authService.authLoading$ | async)">
-  <nav class="navbar" [class.menu-open-state]="menuOpen" *ngIf="authService.isAuthenticated()">
-    <div class="nav-container">
-      <a routerLink="/dashboard" class="nav-brand">
-        <i class="fas fa-tooth"></i> LAB.Demitrio
-      </a>
+ <nav class="navbar" [class.menu-open-state]="menuOpen" *ngIf="authService.isAuthenticated()">
+  <div class="nav-container">
+    <a routerLink="/dashboard" class="nav-brand">
+      <!-- ✅ Logo dinámico en navbar -->
+      <img *ngIf="logoUrl" [src]="logoUrl" alt="Logo" class="nav-logo">
+      <i *ngIf="!logoUrl" class="fas fa-tooth"></i>
+      LAB.Demitrio
+    </a>
       
       <button class="menu-toggle" (click)="toggleMenu()" [class.active]="menuOpen">
         <i class="fas" [ngClass]="{'fa-bars': !menuOpen, 'fa-times': menuOpen}"></i>

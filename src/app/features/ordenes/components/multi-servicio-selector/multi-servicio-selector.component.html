@@ -4,7 +4,7 @@
   <div class="tipo-cliente-selector">
     <label class="switch-label">
       <input type="radio" [(ngModel)]="tipoCliente" value="unico" (change)="onTipoClienteChange()">
-      <span>Mismo cliente para todos</span>
+      <span>Servicios para un solo paciente</span>
     </label>
     <label class="switch-label">
       <input type="radio" [(ngModel)]="tipoCliente" value="multiple" (change)="onTipoClienteChange()">
@@ -53,23 +53,37 @@
       <!-- Detalles expandidos (solo cuando se hace clic) -->
       <div class="servicio-detalles" *ngIf="expandidos[i]">
         <!-- Selector de servicio -->
-        <div class="servicio-selector-wrapper">
-          <input 
-            type="text"
-            [value]="detalle.servicio_nombre || ''"
-            (focus)="toggleDropdown(i)"
-            (input)="filtrarServicios(i, $any($event.target).value)"
-            placeholder="Buscar servicio..."
-            class="servicio-busqueda"
-          >
-          <div class="dropdown-list" *ngIf="indicesActivos[i] && serviciosFiltradosPorIndice[i]?.length">
-            <div *ngFor="let servicio of serviciosFiltradosPorIndice[i]" class="dropdown-item" (click)="seleccionarServicio(i, servicio)">
-              <span>{{ servicio.nombre }}</span>
-              <span class="precio">{{ servicio.precio_referencial | moneda }}</span>
-            </div>
-          </div>
-        </div>
+<!-- multi-servicio-selector.component.html - MODIFICAR EL DROPDOWN -->
 
+<div class="servicio-selector-wrapper">
+  <input 
+    type="text"
+    [value]="detalle.servicio_nombre || ''"
+    (focus)="onServicioFocus(i)"
+    (input)="filtrarServicios(i, $any($event.target).value)"
+    (click)="$event.stopPropagation()"
+    placeholder="Buscar servicio..."
+    class="servicio-busqueda"
+    autocomplete="off"
+  >
+  
+  <div class="dropdown-list" *ngIf="indicesActivos[i] && getServiciosFiltrados(i).length > 0">
+    <div *ngFor="let servicio of getServiciosFiltrados(i)" 
+         class="dropdown-item" 
+         (click)="seleccionarServicio(i, servicio); $event.stopPropagation()">
+      <span>{{ servicio.nombre }}</span>
+      <span class="precio">{{ servicio.precio_referencial | moneda }}</span>
+    </div>
+  </div>
+  
+  <div class="dropdown-empty-message" *ngIf="indicesActivos[i] && getServiciosFiltrados(i).length === 0 && serviciosDisponibles.length > 0">
+    No se encontraron servicios
+  </div>
+  
+  <div class="dropdown-loading" *ngIf="indicesActivos[i] && serviciosDisponibles.length === 0">
+    Cargando servicios...
+  </div>
+</div>
         <!-- Precio unitario -->
         <div class="campo-precio">
           <label>Precio</label>

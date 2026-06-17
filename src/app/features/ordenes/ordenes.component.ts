@@ -82,7 +82,8 @@ ordenesSeleccionadas: any[] = [];
  // Clave para localStorage
   private readonly FILTROS_STORAGE_KEY = 'ordenes_filtros';
   private readonly FILTROS_VISIBLES_KEY = 'ordenes_filtros_visibles';
-
+ calendarioVisible: boolean = true;  // ✅ Nueva propiedad
+  private readonly CALENDARIO_VISIBLE_KEY = 'calendario_visible';
 
 
 // AGREGAR ESTE GETTER (después de las propiedades)
@@ -110,7 +111,13 @@ constructor(
 
 // ordenes.component.ts - Modificar ngOnInit
 
+// ordenes.component.ts - Asegurar que la fecha se muestre en hora Perú
+
 ngOnInit() {
+  // ✅ Restaurar estado del calendario
+  const guardado = localStorage.getItem(this.CALENDARIO_VISIBLE_KEY);
+  this.calendarioVisible = guardado !== null ? guardado === 'true' : true;
+  
   // Restaurar filtros guardados
   this.restaurarFiltros();
 
@@ -121,8 +128,8 @@ ngOnInit() {
         this.fechaServidorHoy = fechaHoraRespuesta.fecha;
         this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
         this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
-        console.log('📅 Fecha del servidor:', this.fechaServidorHoy);
-        console.log('🕐 Hora del servidor:', fechaHoraRespuesta.hora);
+        console.log('📅 Fecha del servidor (Perú):', this.fechaServidorHoy);
+        console.log('🕐 Hora del servidor (Perú):', fechaHoraRespuesta.hora);
         console.log('📅🕐 Fecha/Hora completa:', this.fechaHoraServidor);
         
         // AHORA cargar las órdenes
@@ -130,12 +137,18 @@ ngOnInit() {
       },
       error: (error) => {
         console.error('Error obteniendo fecha/hora del servidor:', error);
-        // Usar fecha local como respaldo
-        const hoy = new Date();
-        this.fechaServidorHoy = hoy.toISOString().split('T')[0];
-        this.fechaHoraServidor = hoy.toISOString();
-        this.fechaHoraTimestamp = hoy.getTime();
-        console.log('📅 Usando fecha local como respaldo:', this.fechaServidorHoy);
+        // ✅ Usar fecha local pero ajustada a Perú
+        const ahora = new Date();
+        // Ajustar a UTC-5 (Perú)
+        const peruOffset = -5 * 60; // minutos
+        const localOffset = ahora.getTimezoneOffset();
+        const diffMinutes = peruOffset - localOffset;
+        const fechaPeru = new Date(ahora.getTime() + diffMinutes * 60000);
+        
+        this.fechaServidorHoy = fechaPeru.toISOString().split('T')[0];
+        this.fechaHoraServidor = fechaPeru.toISOString();
+        this.fechaHoraTimestamp = fechaPeru.getTime();
+        console.log('📅 Usando fecha local ajustada a Perú:', this.fechaServidorHoy);
         
         // Cargar órdenes igualmente
         this.cargarOrdenesConFecha();
@@ -143,6 +156,16 @@ ngOnInit() {
     })
   );
 }
+
+toggleCalendario() {
+    this.calendarioVisible = !this.calendarioVisible;
+    localStorage.setItem(this.CALENDARIO_VISIBLE_KEY, String(this.calendarioVisible));
+  }
+
+
+
+
+
 
 // ordenes.component.ts - MODIFICAR cargarOrdenesConFecha
 
@@ -856,10 +879,11 @@ getContadorTerminados(): number {
 
 // ordenes.component.ts - AGREGAR ESTE MÉTODO
 
+// ordenes.component.ts - Modificar aplicarFiltrosDesdeCalendario
+
 aplicarFiltrosDesdeCalendario(filtros: any) {
-  // Aplicar filtros desde el calendario a la tabla
+  // ✅ Aplicar filtros desde el calendario a la tabla
   if (filtros.fecha_inicio && filtros.fecha_fin) {
-    // Si es una fecha específica, filtrar por esa fecha
     this.filtros.fechaInicio = filtros.fecha_inicio;
     this.filtros.fechaFin = filtros.fecha_fin;
   }
@@ -868,6 +892,8 @@ aplicarFiltrosDesdeCalendario(filtros: any) {
     const doctor = this.doctoresCompleto.find(d => d.id == filtros.doctor_id);
     if (doctor) {
       this.filtros.doctor = doctor.nombre;
+    } else {
+      this.filtros.doctor = '';
     }
   }
   
@@ -875,7 +901,7 @@ aplicarFiltrosDesdeCalendario(filtros: any) {
     this.setFiltroEstado(filtros.estado);
   }
   
-  // Aplicar los filtros
+  // ✅ Aplicar los filtros
   this.filtrarOrdenes();
   
   // Scroll suave hacia la tabla

@@ -1,5 +1,5 @@
 // multi-servicio-selector.component.ts - VERSIÓN ULTRA COMPACTA
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ServicioService } from '../../../../core/services/servicio.service';
@@ -57,8 +57,9 @@ export class MultiServicioSelectorComponent implements OnInit, OnChanges {
    // ✅ Guardar copia de los clientes por servicio originales
   private clientesOriginales: { [key: number]: { cliente_nombre?: string; detalle_cliente?: string } } = {};
   
-  constructor(private servicioService: ServicioService) {}
-  
+  constructor(private servicioService: ServicioService,
+  private cdr: ChangeDetectorRef) {}
+  private _focusTimeout: any = null;
   ngOnInit() {
     this.cargarServicios();
     this.inicializarDetalles();
@@ -141,35 +142,107 @@ ngOnChanges(changes: SimpleChanges) {
     this.expandidos[index] = !this.expandidos[index];
   }
   
-  toggleDropdown(index: number) {
-    this.indicesActivos[index] = !this.indicesActivos[index];
-    if (this.indicesActivos[index]) {
-      this.filtrarServicios(index, this.busquedaPorIndice[index] || '');
-    }
+// ✅ MODIFICAR: toggleDropdown - Abrir siempre con opciones
+// En toggleDropdown() - Línea ~120
+toggleDropdown(index: number) {
+  console.log('🔽 [MultiServicio] toggleDropdown - índice:', index, 'activo:', this.indicesActivos[index]);
+  
+  if (!this.indicesActivos[index]) {
+    this.indicesActivos[index] = true;
+    this.serviciosFiltradosPorIndice[index] = [...this.serviciosDisponibles];
+    this.busquedaPorIndice[index] = '';
+    console.log('🔽 [MultiServicio] toggleDropdown - ABRIENDO, servicios disponibles:', this.serviciosDisponibles.length);
+    this.cdr?.detectChanges();
+  } else {
+    this.indicesActivos[index] = false;
+    console.log('🔽 [MultiServicio] toggleDropdown - CERRANDO');
+  }
+}
+
+  
+// ✅ MODIFICAR: filtrarServicios - Mostrar resultados solo si hay búsqueda
+// En filtrarServicios() - Línea ~135
+filtrarServicios(index: number, busqueda: string) {
+  console.log('🔍 [MultiServicio] filtrarServicios - índice:', index, 'búsqueda:', `"${busqueda}"`);
+  
+  this.busquedaPorIndice[index] = busqueda;
+  
+  if (!busqueda || busqueda.trim() === '') {
+    this.serviciosFiltradosPorIndice[index] = [...this.serviciosDisponibles];
+    console.log('🔍 [MultiServicio] filtrarServicios - SIN FILTRO, total:', this.serviciosFiltradosPorIndice[index].length);
+    return;
   }
   
-  filtrarServicios(index: number, busqueda: string) {
-    this.busquedaPorIndice[index] = busqueda;
-    if (!busqueda?.trim()) {
-      this.serviciosFiltradosPorIndice[index] = [];
-      return;
-    }
-    const busquedaLower = busqueda.toLowerCase();
-    this.serviciosFiltradosPorIndice[index] = this.serviciosDisponibles
-      .filter(s => s.nombre.toLowerCase().includes(busquedaLower))
-      .slice(0, 8);
+  const busquedaLower = busqueda.toLowerCase().trim();
+  this.serviciosFiltradosPorIndice[index] = this.serviciosDisponibles
+    .filter(s => s.nombre.toLowerCase().includes(busquedaLower))
+    .slice(0, 15);
+  console.log('🔍 [MultiServicio] filtrarServicios - RESULTADOS:', this.serviciosFiltradosPorIndice[index].length);
+}
+  
+// ✅ NUEVO: Método para manejar focus en el campo de búsqueda
+// En onServicioFocus() - Línea ~145
+// MODIFICAR: onServicioFocus()
+onServicioFocus(index: number) {
+  console.log('🎯 [MultiServicio] onServicioFocus - índice:', index, 'activo:', this.indicesActivos[index]);
+  
+  // ✅ Limpiar timeout anterior
+  if (this._focusTimeout) {
+    clearTimeout(this._focusTimeout);
+    this._focusTimeout = null;
   }
   
+  // ✅ Solo abrir si está cerrado
+  if (!this.indicesActivos[index]) {
+    this.indicesActivos[index] = true;
+    this.serviciosFiltradosPorIndice[index] = [...this.serviciosDisponibles];
+    console.log('🎯 [MultiServicio] onServicioFocus - ABRIENDO por focus, servicios:', this.serviciosDisponibles.length);
+    
+    if (this.busquedaPorIndice[index]) {
+      this.filtrarServicios(index, this.busquedaPorIndice[index]);
+    }
+    this.cdr?.detectChanges();
+  }
+}
+
+
+// ✅ NUEVO: Cerrar dropdown al hacer clic fuera
+@HostListener('document:click', ['$event'])
+onDocumentClick(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  const wrapper = target.closest('.servicio-selector-wrapper');
+  
+  // ✅ Si el clic fue fuera del wrapper, cerrar todos los dropdowns
+  if (!wrapper) {
+    Object.keys(this.indicesActivos).forEach(key => {
+      this.indicesActivos[parseInt(key)] = false;
+    });
+    this.cdr?.detectChanges();
+  }
+}
+
+
+
+
+
+
 // También corregir cuando se selecciona servicio
+// ✅ MODIFICAR: seleccionarServicio - Cerrar dropdown y limpiar búsqueda
+// En seleccionarServicio() - Línea ~155
 seleccionarServicio(index: number, servicio: any) {
+  console.log('✅ [MultiServicio] seleccionarServicio - índice:', index, 'servicio:', servicio.nombre);
+  
   this.detalles[index].servicio_id = servicio.id;
   this.detalles[index].servicio_nombre = servicio.nombre;
-  // ✅ Asegurar que precio_unitario sea número
   this.detalles[index].precio_unitario = Number(servicio.precio_referencial) || 0;
+  
   this.indicesActivos[index] = false;
   this.busquedaPorIndice[index] = '';
+  this.serviciosFiltradosPorIndice[index] = [];
+  
   this.calcularTotal();
   this.emitirCambios();
+  console.log('✅ [MultiServicio] seleccionarServicio - COMPLETADO');
 }
   
 // multi-servicio-selector.component.ts - MODIFICAR agregarDetalle
@@ -328,6 +401,16 @@ async verImagenServicio(url: string) {
   }
 }
 
-// ✅ También puedes eliminar o mantener el método verImagen() existente
-// pero asegúrate de que el template use verImagenServicio()
+// multi-servicio-selector.component.ts - AGREGAR ESTE MÉTODO
+
+/**
+ * Obtiene los servicios filtrados para un índice específico
+ * Devuelve un array vacío si no hay datos para evitar errores
+ */
+getServiciosFiltrados(index: number): any[] {
+  return this.serviciosFiltradosPorIndice[index] || [];
+}
+
+
+
 }

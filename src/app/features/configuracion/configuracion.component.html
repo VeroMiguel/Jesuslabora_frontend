@@ -263,6 +263,72 @@
       </div>
     </section>
 
+<!-- configuracion.component.html - Agregar después de la sección de notificaciones -->
+
+<!-- ── Sección: Personalización del sistema ───────────────────────────────── -->
+<section class="config-section">
+  <div class="section-header">
+    <div class="section-icon brand-icon">
+      <i class="fas fa-paint-brush"></i>
+    </div>
+    <div>
+      <h2>Personalización</h2>
+      <p>Configura la imagen del sistema</p>
+    </div>
+  </div>
+
+  <div class="config-card">
+    <div class="field-group">
+      <div class="field-label-row">
+        <label><i class="fas fa-image"></i> Logo del sistema</label>
+      </div>
+      <p class="field-hint">
+        Sube un logo personalizado que aparecerá en la pantalla de inicio y en la barra de navegación.
+      </p>
+      
+      <div class="logo-preview-container">
+        <div class="logo-preview" *ngIf="logoPreviewUrl || logoActualUrl">
+          <img [src]="logoPreviewUrl || logoActualUrl" alt="Logo preview" class="logo-preview-img">
+          <button *ngIf="logoPreviewUrl || logoActualUrl" class="btn-remove-logo" (click)="removerLogo()" type="button">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        <div class="logo-placeholder" *ngIf="!logoPreviewUrl && !logoActualUrl">
+          <i class="fas fa-image"></i>
+          <span>Sin logo</span>
+        </div>
+        
+        <div class="logo-upload-area">
+          <input type="file" #logoInput accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style="display: none" (change)="onLogoSeleccionado($event)">
+          <button class="btn-upload-logo" (click)="logoInput.click()" type="button">
+            <i class="fas fa-upload"></i> Seleccionar imagen
+          </button>
+          <button *ngIf="logoPreviewUrl" class="btn-save-logo" (click)="guardarLogo()" [disabled]="subiendoLogo" type="button">
+            <i class="fas" [ngClass]="{'fa-spinner fa-spin': subiendoLogo, 'fa-save': !subiendoLogo}"></i>
+            {{ subiendoLogo ? 'Guardando...' : 'Guardar logo' }}
+          </button>
+          <p class="upload-hint">Formatos: JPG, PNG, GIF, WEBP. Máx: 2MB</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     <!-- ── Panel de estado actual ─────────────────────────────────────────── -->
     <section class="config-section">

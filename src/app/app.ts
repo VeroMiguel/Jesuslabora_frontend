@@ -8,6 +8,7 @@ import { NotificationService } from './core/services/notification.service';
 import { FirebaseMessagingService } from './core/services/firebase-messaging.service';
 import { SessionTimeoutComponent } from './shared/components/session-timeout/session-timeout.component';
 import { environment } from '../environments/environment';  // ✅ AGREGAR ESTA LÍNEA
+import { LogoService } from './core/services/logo.service';
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -27,6 +28,8 @@ export class AppComponent implements OnInit, OnDestroy {
   menuOpen: boolean = false;
   private authSubscription?: Subscription;
   private originalOverflow: string = '';
+   logoUrl: string | null = null;
+  private logoSubscription?: Subscription;
   
   // app.ts - Modificar el constructor
 
@@ -36,7 +39,8 @@ constructor(
     private router: Router,
     private sessionService: SessionService,
     private notificationService: NotificationService,
-    private fcmService: FirebaseMessagingService
+    private fcmService: FirebaseMessagingService,
+    private logoService: LogoService  // ✅ AGREGAR
   ) {
     this.currentTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', this.currentTheme);
@@ -69,6 +73,10 @@ constructor(
           this.router.navigate(['/login']);
         }
       }
+    });
+     // ✅ Suscribirse al logo
+    this.logoSubscription = this.logoService.logo$.subscribe(url => {
+      this.logoUrl = url;
     });
   }
 
@@ -112,7 +120,9 @@ private registrarServiceWorker(): void {
     if (this.menuOpen) {
       this.restoreBodyScroll();
     }
+    this.logoSubscription?.unsubscribe();
   }
+  
 
   toggleTheme() {
     this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';

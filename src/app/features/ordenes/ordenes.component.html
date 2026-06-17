@@ -36,8 +36,17 @@
   </div>
 
 
-<!-- NUEVO: Calendario interactivo -->
+<!-- ordenes.component.html - Agregar botón de toggle antes del calendario -->
+<div class="calendario-toggle-container">
+  <button class="btn-toggle-calendario" (click)="toggleCalendario()">
+    <i class="fas" [ngClass]="{'fa-chevron-up': calendarioVisible, 'fa-chevron-down': !calendarioVisible}"></i>
+    {{ calendarioVisible ? 'Ocultar calendario' : 'Mostrar calendario' }}
+  </button>
+</div>
+
+<!-- NUEVO: Calendario interactivo con *ngIf -->
 <app-calendario-filtro
+  *ngIf="calendarioVisible"
   [doctores]="doctoresCompleto"
   (filtrosAplicados)="aplicarFiltrosDesdeCalendario($event)"
 ></app-calendario-filtro>

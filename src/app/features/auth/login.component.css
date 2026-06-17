@@ -376,3 +376,33 @@
 [data-theme="dark"] .toggle-password {
   color: #94a3b8;
 }
+/* login.component.css - Agregar estilos para logo */
+
+.logo-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.login-logo {
+  max-width: 120px;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 20px;
+}
+
+.logo-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  animation: pulse 2s infinite;
+}
+
+.logo-icon i {
+  font-size: 40px;
+  color: white;
+}

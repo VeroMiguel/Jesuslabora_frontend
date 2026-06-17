@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
+// searchable-select.component.ts - VERSIÓN CORREGIDA
+import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { DebugService } from '../../../core/services/debug.service';
@@ -9,22 +10,23 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, ImagenPipe],
   template: `
-    <div class="searchable-select">
-      <!-- searchable-select.component.html - Modificar -->
-      <div class="select-display" [class.open]="abierto" (click)="toggleDropdown()">
-        <input
-          type="text"
-          [(ngModel)]="textoBusqueda"
-          (ngModelChange)="filtrarOpciones()"
-          (focus)="toggleDropdown()"
-          (blur)="onInputBlur()"
-          [placeholder]="placeholder"
-          [disabled]="disabled"
-          class="select-input"
-          #inputElement
-        >
-        <i class="fas fa-chevron-down" [class.rotated]="abierto" (click)="$event.stopPropagation()"></i>
-      </div>
+<div class="searchable-select" [class.open]="abierto">
+  <div class="select-display" (click)="toggleDropdown($event)">
+    <input
+      type="text"
+      [(ngModel)]="textoBusqueda"
+      (ngModelChange)="onBusquedaChange()"
+      (focus)="onFocus()"
+      (blur)="onInputBlur()"
+      (mousedown)="$event.stopPropagation()"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      class="select-input"
+      #inputElement
+      autocomplete="off"
+    >
+    <i class="fas fa-chevron-down" [class.rotated]="abierto"></i>
+  </div>
 
       <div class="select-dropdown" *ngIf="abierto" (mousedown)="$event.preventDefault()">
         <div class="dropdown-header">
@@ -45,7 +47,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
 
           <div *ngFor="let opcion of opcionesFiltradas" 
                class="dropdown-option" 
-               [class.selected]="valorSeleccionado?.id === opcion.id"
+               [class.selected]="isSelected(opcion)"
                (click)="seleccionarOpcion(opcion)">
             <div class="option-content">
               <span *ngIf="mostrarIcono && opcion.logo_url" class="option-icon">
@@ -53,7 +55,7 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
               </span>
               <span class="option-text">{{ opcion.nombre }}</span>
             </div>
-            <i *ngIf="valorSeleccionado?.id === opcion.id" class="fas fa-check"></i>
+            <i *ngIf="isSelected(opcion)" class="fas fa-check"></i>
           </div>
 
           <div *ngIf="opcionesFiltradas.length === 0" class="dropdown-empty">
@@ -230,7 +232,6 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       font-style: italic;
     }
 
-    /* ✅ ESTILOS PARA TEMA OSCURO - CORREGIDOS */
     [data-theme="dark"] .select-dropdown {
       background: #1e293b;
       border-color: #334155;
@@ -274,13 +275,20 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
     }
   ]
 })
-export class SearchableSelectComponent implements ControlValueAccessor {
+export class SearchableSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() opciones: any[] = [];
   @Input() placeholder: string = 'Seleccionar...';
   @Input() incluirTodos: boolean = false;
   @Input() mostrarIcono: boolean = false;
   @Input() mostrarDetalle: boolean = false;
   @Input() disabled: boolean = false;
+  @Input() autoOpen: boolean = false; // ✅ NUEVO: para abrir automáticamente al hacer focus
+  
+  @Input() compareWith: (o1: any, o2: any) => boolean = (o1: any, o2: any) => {
+    if (!o1 || !o2) return o1 === o2;
+    if (o1.id !== undefined && o2.id !== undefined) return o1.id === o2.id;
+    return o1 === o2;
+  };
 
   @Output() selectionChange = new EventEmitter<any>();
 
@@ -291,36 +299,39 @@ export class SearchableSelectComponent implements ControlValueAccessor {
   opcionesFiltradas: any[] = [];
   abierto: boolean = false;
   private ignoreBlur = false;
+  private isFocused = false;
 
   private onChange: any = () => {};
   private onTouched: any = () => {};
 
-  // ✅ AGREGAR EL CONSTRUCTOR CON DebugService
-  constructor(private debugService: DebugService) {}
-
-
+  constructor(private debugService: DebugService,private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.filtrarOpciones();
   }
 
-// searchable-select.component.ts - Agregar este método
-
-// Modificar ngOnChanges para usar debug service
   ngOnChanges(changes: SimpleChanges) {
-    // ✅ Solo mostrar si debug está activado
-    if (this.debugService.logSelects && changes['opciones'] && this.opciones.length > 0) {
-      const currentValue = this.valorSeleccionado?.id;
-      if (currentValue) {
-        console.log('🔄 Re-evaluando selección con nuevas opciones');
-        this.writeValue(currentValue);
-      }
-    } else if (changes['opciones'] && this.opciones.length > 0) {
-      const currentValue = this.valorSeleccionado?.id;
-      if (currentValue) {
-        this.writeValue(currentValue);
+    if (changes['opciones']) {
+      // ✅ Cuando cambian las opciones, re-filtrar
+      this.filtrarOpciones();
+      
+      // ✅ Si hay un valor seleccionado, actualizar texto
+      if (this.valorSeleccionado && this.valorSeleccionado.nombre) {
+        this.textoBusqueda = this.valorSeleccionado.nombre;
       }
     }
+    
+    if (changes['valorSeleccionado']?.currentValue) {
+      const valor = changes['valorSeleccionado'].currentValue;
+      if (valor && valor.nombre) {
+        this.textoBusqueda = valor.nombre;
+      }
+    }
+  }
+
+  isSelected(opcion: any): boolean {
+    if (!opcion || !this.valorSeleccionado) return false;
+    return this.compareWith(opcion, this.valorSeleccionado);
   }
 
   @HostListener('document:click', ['$event'])
@@ -333,53 +344,111 @@ export class SearchableSelectComponent implements ControlValueAccessor {
     }
   }
 
-  filtrarOpciones() {
-    if (!this.textoBusqueda) {
-      this.opcionesFiltradas = [...this.opciones];
-    } else {
-      const busqueda = this.textoBusqueda.toLowerCase();
-      this.opcionesFiltradas = this.opciones.filter(opcion => 
-        opcion.nombre.toLowerCase().includes(busqueda) ||
-        (opcion.telefono_whatsapp && opcion.telefono_whatsapp.toLowerCase().includes(busqueda))
-      );
-    }
+// En onBusquedaChange() - Línea ~95
+onBusquedaChange() {
+  console.log('✏️ [SearchableSelect] onBusquedaChange - texto:', this.textoBusqueda);
+  this.filtrarOpciones();
+  if (this.textoBusqueda && !this.abierto) {
+    this.abierto = true;
+    console.log('✏️ [SearchableSelect] onBusquedaChange - abriendo dropdown');
   }
+  if (!this.textoBusqueda && this.abierto) {
+    this.filtrarOpciones();
+  }
+}
 
-// searchable-select.component.ts - MODIFICAR abrirDropdown
+// En filtrarOpciones() - Línea ~100
+filtrarOpciones() {
+  console.log('🔍 [SearchableSelect] filtrarOpciones - textoBusqueda:', this.textoBusqueda, 'opciones totales:', this.opciones.length);
+  
+  if (!this.textoBusqueda || this.textoBusqueda.trim() === '') {
+    this.opcionesFiltradas = [...this.opciones];
+    console.log('🔍 [SearchableSelect] filtrarOpciones - SIN FILTRO, opciones:', this.opcionesFiltradas.length);
+  } else {
+    const busqueda = this.textoBusqueda.toLowerCase().trim();
+    this.opcionesFiltradas = this.opciones.filter(opcion => 
+      opcion.nombre.toLowerCase().includes(busqueda) ||
+      (opcion.telefono_whatsapp && opcion.telefono_whatsapp.toLowerCase().includes(busqueda))
+    );
+    console.log('🔍 [SearchableSelect] filtrarOpciones - CON FILTRO, resultados:', this.opcionesFiltradas.length);
+  }
+}
 
-// ✅ Cambiar a toggle (alternar)
+// MODIFICAR: onFocus() - Prevenir que se ejecute toggleDropdown después
+onFocus() {
+  console.log('🔍 [SearchableSelect] onFocus - abierto:', this.abierto, 'opciones:', this.opciones.length);
+  this.isFocused = true;
+  
+  // ✅ SOLO abrir si no está abierto y no hay una acción de toggle pendiente
+  if (!this.abierto && !this._togglePending) {
+    this.abierto = true;
+    this.filtrarOpciones();
+    console.log('🔍 [SearchableSelect] onFocus - abierto activado, opciones filtradas:', this.opcionesFiltradas.length);
+    this.cdr?.detectChanges();
+  }
+}
+
+// MODIFICAR: toggleDropdown() - Prevenir la doble ejecución
 toggleDropdown(event?: Event) {
   if (event) {
     event.stopPropagation();
+    event.preventDefault(); // ✅ Prevenir comportamiento por defecto
   }
-  if (!this.disabled) {
-    this.abierto = !this.abierto;
-    if (this.abierto) {
-      this.filtrarOpciones();
-      // Enfocar el input al abrir
-      setTimeout(() => {
-        this.inputElement?.nativeElement?.focus();
-      }, 50);
-    }
+  if (this.disabled) return;
+  
+  // ✅ Si el dropdown ya está abierto, cerrarlo
+  // ✅ Si está cerrado, abrirlo
+  const nuevoEstado = !this.abierto;
+  
+  console.log('🔄 [SearchableSelect] toggleDropdown - antes:', this.abierto, 'nuevo:', nuevoEstado);
+  
+  // ✅ Marcar que hay una acción de toggle en progreso
+  this._togglePending = true;
+  
+  this.abierto = nuevoEstado;
+  
+  if (this.abierto) {
+    this.filtrarOpciones();
+    console.log('🔄 [SearchableSelect] toggleDropdown - opciones filtradas:', this.opcionesFiltradas.length);
+    setTimeout(() => {
+      if (this.inputElement) {
+        this.inputElement.nativeElement.focus();
+      }
+    }, 50);
   }
+  
+  // ✅ Limpiar el flag después de un breve delay
+  setTimeout(() => {
+    this._togglePending = false;
+  }, 200);
+  
+  this.cdr?.detectChanges();
 }
 
-// Mantener abrirDropdown para compatibilidad (opcional)
-abrirDropdown() {
-  this.toggleDropdown();
-}
+// Agregar propiedad para controlar el toggle
+private _togglePending: boolean = false;
+
+
+
+
+
+
   cerrarDropdown() {
     this.abierto = false;
+    this.isFocused = false;
     this.onTouched();
   }
 
-  onInputBlur() {
-    if (!this.ignoreBlur) {
-      setTimeout(() => {
+// MODIFICAR: onInputBlur() - No cerrar si hay toggle pendiente
+onInputBlur() {
+  if (!this.ignoreBlur && !this._togglePending) {
+    setTimeout(() => {
+      if (!this.isFocused && !this._togglePending) {
         this.cerrarDropdown();
-      }, 200);
-    }
+      }
+    }, 200);
   }
+}
 
   seleccionarOpcion(opcion: any) {
     this.ignoreBlur = true;
@@ -393,9 +462,10 @@ abrirDropdown() {
     }
     
     this.abierto = false;
+    this.isFocused = false;
     
-    this.onChange(opcion ? opcion.id : null);
     this.selectionChange.emit(opcion);
+    this.onChange(opcion ? opcion.id : null);
     
     setTimeout(() => {
       this.ignoreBlur = false;
@@ -406,15 +476,15 @@ abrirDropdown() {
     event.stopPropagation();
     this.textoBusqueda = '';
     this.filtrarOpciones();
+    // ✅ Mantener abierto si hay opciones
+    if (this.opciones.length > 0) {
+      this.abierto = true;
+    }
   }
 
-// searchable-select.component.ts - Modificar writeValue
-
- // ✅ MODIFICAR writeValue para usar debug service
   writeValue(value: any): void {
-    // ✅ Solo mostrar logs si debug está activado
     if (this.debugService.logSelects) {
-      console.log('📝 writeValue llamado con:', value, 'opciones:', this.opciones.length);
+      console.log('📝 writeValue llamado con:', value);
     }
     
     if (value === null || value === undefined) {
@@ -424,21 +494,17 @@ abrirDropdown() {
       return;
     }
     
-    // Esperar a que las opciones estén cargadas
     if (this.opciones.length === 0) {
-      if (this.debugService.logSelects) {
-        console.log('⏳ Opciones aún no cargadas, reintentando en 100ms...');
-      }
-      setTimeout(() => this.writeValue(value), 100);
+      setTimeout(() => this.writeValue(value), 50);
       return;
     }
     
-    const opcion = this.opciones.find(o => o.id === Number(value));
-    
-    if (this.debugService.logSelects && opcion) {
-      console.log(`🔍 Opción encontrada: ${opcion.nombre}`);
-    } else if (this.debugService.logSelects && !opcion) {
-      console.warn('⚠️ No se encontró opción con ID:', value);
+    // Buscar por ID
+    let opcion = null;
+    if (typeof value === 'object' && value !== null && value.id !== undefined) {
+      opcion = this.opciones.find(o => o.id === value.id);
+    } else {
+      opcion = this.opciones.find(o => o.id === Number(value));
     }
     
     if (opcion) {

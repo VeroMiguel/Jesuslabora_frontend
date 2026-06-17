@@ -13,7 +13,7 @@ import Swal from 'sweetalert2';
 import { ConfigService, AppConfig } from '../../core/services/config.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { FirebaseMessagingService } from '../../core/services/firebase-messaging.service';
-
+import { LogoService } from '../../core/services/logo.service';
 @Component({
   selector: 'app-configuracion',
   standalone: true,
@@ -28,6 +28,10 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
   guardadoExitoso = false;
   solicitandoFcm = false;
   private sub?: Subscription;
+    logoActualUrl: string | null = null;
+  logoPreviewUrl: string | null = null;
+  logoArchivo: File | null = null;
+  subiendoLogo = false;
 
   // Opciones para el tiempo de cierre automático
   opcionesCierre = [
@@ -66,7 +70,8 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private configService: ConfigService,
     public notificationService: NotificationService,
-    public fcmService: FirebaseMessagingService
+    public fcmService: FirebaseMessagingService,
+   private logoService: LogoService  // ✅ AGREGAR
   ) {}
 
   ngOnInit(): void {
@@ -85,10 +90,113 @@ export class ConfiguracionComponent implements OnInit, OnDestroy {
       sonidoHabilitado: [cfg.sonidoHabilitado],
       vibracionHabilitada: [cfg.vibracionHabilitada]
     });
+  // Cargar logo actual
+    this.logoService.logo$.subscribe(url => {
+      this.logoActualUrl = url;
+    });
+    this.logoService.cargarLogo();
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+  }
+
+
+
+onLogoSeleccionado(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      
+      // Validar tamaño (máx 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        Swal.fire('Error', 'La imagen no puede superar los 2MB', 'error');
+        return;
+      }
+      
+      // Validar tipo
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        Swal.fire('Error', 'Formato no soportado. Use JPG, PNG, GIF o WEBP', 'error');
+        return;
+      }
+      
+      this.logoArchivo = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.logoPreviewUrl = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  async guardarLogo() {
+    if (!this.logoArchivo) return;
+    
+    this.subiendoLogo = true;
+    
+    try {
+      await this.logoService.subirLogo(this.logoArchivo).toPromise();
+      this.logoActualUrl = this.logoPreviewUrl;
+      this.logoPreviewUrl = null;
+      this.logoArchivo = null;
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Logo actualizado',
+        text: 'El logo se ha guardado correctamente',
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+      });
+      
+      // Recargar logo
+      this.logoService.cargarLogo();
+    } catch (error) {
+      console.error('Error subiendo logo:', error);
+      Swal.fire('Error', 'No se pudo guardar el logo', 'error');
+    } finally {
+      this.subiendoLogo = false;
+    }
+  }
+
+  async removerLogo() {
+    const result = await Swal.fire({
+      title: '¿Eliminar logo?',
+      text: 'El sistema usará el icono por defecto',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+    
+    if (result.isConfirmed) {
+      this.subiendoLogo = true;
+      try {
+        await this.logoService.eliminarLogo().toPromise();
+        this.logoActualUrl = null;
+        this.logoPreviewUrl = null;
+        this.logoArchivo = null;
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Logo eliminado',
+          text: 'Se ha restaurado el icono por defecto',
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end'
+        });
+        
+        this.logoService.cargarLogo();
+      } catch (error) {
+        console.error('Error eliminando logo:', error);
+        Swal.fire('Error', 'No se pudo eliminar el logo', 'error');
+      } finally {
+        this.subiendoLogo = false;
+      }
+    }
   }
 
   // ─── Helpers de template ─────────────────────────────────────────────────────

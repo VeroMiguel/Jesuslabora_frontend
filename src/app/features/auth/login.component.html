@@ -1,13 +1,18 @@
-<!-- login.component.html -->
+<!-- login.component.html - Modificar la sección del header -->
 <div class="login-container">
   <div class="login-card">
     <div class="login-header">
-      <div class="logo-icon">
-        <i class="fas fa-tooth"></i>
+      <!-- ✅ Logo dinámico - puede ser imagen o icono por defecto -->
+      <div class="logo-container">
+        <img *ngIf="logoUrl" [src]="logoUrl" alt="Logo" class="login-logo">
+        <div *ngIf="!logoUrl" class="logo-icon">
+          <i class="fas fa-tooth"></i>
+        </div>
       </div>
       <h1>LAB.Demitrio</h1>
       <p class="subtitle">Sistema de Gestión Dental</p>
     </div>
+
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
       <div class="input-group">

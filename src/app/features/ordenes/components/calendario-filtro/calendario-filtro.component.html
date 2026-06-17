@@ -7,8 +7,9 @@
         <app-searchable-select
           [opciones]="doctores"
           [(ngModel)]="doctorSeleccionado"
+          [compareWith]="compararDoctores"
           placeholder="Todos los doctores"
-          (selectionChange)="aplicarFiltros()"
+          (selectionChange)="onDoctorSeleccionado($event)"
         ></app-searchable-select>
       </div>
       
@@ -50,17 +51,77 @@
     </div>
   </div>
   
-<!-- calendario-filtro.component.html - Agregar #fullCalendar -->
-<div class="calendario-wrapper">
+  <div class="calendario-wrapper">
     <full-calendar
         #fullCalendar
         [options]="calendarOptions"
         (click)="onDateClick($event)"
     ></full-calendar>
-</div>
+  </div>
   
   <div *ngIf="cargando" class="loading-overlay">
     <div class="spinner"></div>
     <span>Cargando eventos...</span>
+  </div>
+</div>
+
+<!-- Modal mejorado -->
+<div *ngIf="modalVisible" class="modal-overlay" (click)="cerrarModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <i class="fas fa-calendar-day"></i>
+        <h3>{{ modalFecha }}</h3>
+      </div>
+      <div class="modal-header-right">
+        <span class="modal-badge">{{ modalEventosFiltrados.length }} servicio(s)</span>
+        <button class="modal-close" (click)="cerrarModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-search">
+      <i class="fas fa-search"></i>
+      <input 
+        type="text" 
+        [(ngModel)]="modalBusqueda" 
+        (input)="filtrarModalEventos()"
+        placeholder="Buscar por doctor, servicio, cliente..."
+        class="modal-search-input"
+        autofocus
+      >
+      <button *ngIf="modalBusqueda" class="btn-clear-modal-search" (click)="modalBusqueda = ''; filtrarModalEventos()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-eventos">
+      <div *ngFor="let evento of modalEventosFiltrados" 
+           class="modal-evento" 
+           (click)="irADetalle(evento)">
+        <div class="modal-evento-color" [style.backgroundColor]="evento.color || '#6366f1'"></div>
+        <div class="modal-evento-info">
+          <span class="modal-evento-titulo">{{ evento.title }}</span>
+          <div class="modal-evento-detalles">
+            <span class="modal-evento-detalle" *ngIf="evento.extendedProps?.hora">
+              <i class="fas fa-clock"></i> {{ evento.extendedProps.hora }}
+            </span>
+            <span class="modal-evento-detalle" *ngIf="evento.extendedProps?.orden?.cliente_nombre">
+              <i class="fas fa-user"></i> {{ evento.extendedProps.orden.cliente_nombre }}
+            </span>
+            <span class="modal-evento-detalle" *ngIf="evento.extendedProps?.orden?.id_externo">
+              <i class="fas fa-hashtag"></i> {{ evento.extendedProps.orden.id_externo }}
+            </span>
+          </div>
+        </div>
+        <i class="fas fa-chevron-right modal-evento-icon"></i>
+      </div>
+      
+      <div *ngIf="modalEventosFiltrados.length === 0" class="modal-empty">
+        <i class="fas fa-inbox"></i>
+        <p>No hay servicios que coincidan con la búsqueda</p>
+      </div>
+    </div>
   </div>
 </div>

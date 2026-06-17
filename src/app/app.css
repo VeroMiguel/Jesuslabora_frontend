@@ -334,3 +334,32 @@ body.menu-open {
     font-size: 0.85rem;
   }
 }
+/* app.css - Agregar estilos para nav-logo */
+
+.nav-brand {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1001;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.nav-logo {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-logo {
+    width: 28px;
+    height: 28px;
+  }
+}
