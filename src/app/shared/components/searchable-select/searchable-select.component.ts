@@ -1,4 +1,5 @@
-// searchable-select.component.ts - VERSIÓN CORREGIDA
+// searchable-select.component.ts - VERSIÓN DEFINITIVA
+
 import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, ViewChild, OnChanges, SimpleChanges, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
@@ -10,23 +11,24 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, ImagenPipe],
   template: `
-<div class="searchable-select" [class.open]="abierto">
-  <div class="select-display" (click)="toggleDropdown($event)">
-    <input
-      type="text"
-      [(ngModel)]="textoBusqueda"
-      (ngModelChange)="onBusquedaChange()"
-      (focus)="onFocus()"
-      (blur)="onInputBlur()"
-      (mousedown)="$event.stopPropagation()"
-      [placeholder]="placeholder"
-      [disabled]="disabled"
-      class="select-input"
-      #inputElement
-      autocomplete="off"
-    >
-    <i class="fas fa-chevron-down" [class.rotated]="abierto"></i>
-  </div>
+    <div class="searchable-select" [class.open]="abierto" #containerRef>
+      <div class="select-display">
+        <input
+          type="text"
+          [(ngModel)]="textoBusqueda"
+          (ngModelChange)="onBusquedaChange()"
+          (click)="onInputClick($event)"
+          (focus)="onInputFocus($event)"
+          (blur)="onInputBlur()"
+          [placeholder]="placeholder"
+          [disabled]="disabled"
+          class="select-input"
+          #inputElement
+          autocomplete="off"
+          readonly
+        >
+        <i class="fas fa-chevron-down" [class.rotated]="abierto"></i>
+      </div>
 
       <div class="select-dropdown" *ngIf="abierto" (mousedown)="$event.preventDefault()">
         <div class="dropdown-header">
@@ -34,6 +36,18 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
           <button *ngIf="textoBusqueda" class="btn-clear-search" (click)="limpiarBusqueda($event)">
             <i class="fas fa-times"></i>
           </button>
+        </div>
+        
+        <div class="dropdown-search">
+          <input
+            type="text"
+            [(ngModel)]="textoBusqueda"
+            (ngModelChange)="onBusquedaChange()"
+            placeholder="Filtrar..."
+            class="dropdown-search-input"
+            #searchInput
+            (click)="$event.stopPropagation()"
+          >
         </div>
         
         <div class="dropdown-options">
@@ -172,6 +186,28 @@ import { ImagenPipe } from '../../pipes/imagen.pipe';
       color: var(--txt, #0f172a);
     }
 
+    .dropdown-search {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--bor, #e2e8f0);
+    }
+
+    .dropdown-search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--bor, #e2e8f0);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--in, #f8fafc);
+      color: var(--txt, #0f172a);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .dropdown-search-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.1);
+    }
+
     .dropdown-options {
       overflow-y: auto;
       max-height: 250px;
@@ -282,7 +318,6 @@ export class SearchableSelectComponent implements ControlValueAccessor, OnChange
   @Input() mostrarIcono: boolean = false;
   @Input() mostrarDetalle: boolean = false;
   @Input() disabled: boolean = false;
-  @Input() autoOpen: boolean = false; // ✅ NUEVO: para abrir automáticamente al hacer focus
   
   @Input() compareWith: (o1: any, o2: any) => boolean = (o1: any, o2: any) => {
     if (!o1 || !o2) return o1 === o2;
@@ -293,18 +328,19 @@ export class SearchableSelectComponent implements ControlValueAccessor, OnChange
   @Output() selectionChange = new EventEmitter<any>();
 
   @ViewChild('inputElement') inputElement!: ElementRef<HTMLInputElement>;
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('containerRef') containerRef!: ElementRef<HTMLDivElement>;
 
   valorSeleccionado: any = null;
   textoBusqueda: string = '';
   opcionesFiltradas: any[] = [];
   abierto: boolean = false;
   private ignoreBlur = false;
-  private isFocused = false;
 
   private onChange: any = () => {};
   private onTouched: any = () => {};
 
-  constructor(private debugService: DebugService,private cdr: ChangeDetectorRef) {}
+  constructor(private debugService: DebugService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.filtrarOpciones();
@@ -312,10 +348,7 @@ export class SearchableSelectComponent implements ControlValueAccessor, OnChange
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['opciones']) {
-      // ✅ Cuando cambian las opciones, re-filtrar
       this.filtrarOpciones();
-      
-      // ✅ Si hay un valor seleccionado, actualizar texto
       if (this.valorSeleccionado && this.valorSeleccionado.nombre) {
         this.textoBusqueda = this.valorSeleccionado.nombre;
       }
@@ -339,116 +372,70 @@ export class SearchableSelectComponent implements ControlValueAccessor, OnChange
     if (!this.abierto) return;
     
     const target = event.target as HTMLElement;
-    if (!target.closest('.searchable-select')) {
+    if (!this.containerRef?.nativeElement?.contains(target)) {
       this.cerrarDropdown();
     }
   }
 
-// En onBusquedaChange() - Línea ~95
-onBusquedaChange() {
-  console.log('✏️ [SearchableSelect] onBusquedaChange - texto:', this.textoBusqueda);
-  this.filtrarOpciones();
-  if (this.textoBusqueda && !this.abierto) {
-    this.abierto = true;
-    console.log('✏️ [SearchableSelect] onBusquedaChange - abriendo dropdown');
-  }
-  if (!this.textoBusqueda && this.abierto) {
+  onBusquedaChange() {
     this.filtrarOpciones();
   }
-}
 
-// En filtrarOpciones() - Línea ~100
-filtrarOpciones() {
-  console.log('🔍 [SearchableSelect] filtrarOpciones - textoBusqueda:', this.textoBusqueda, 'opciones totales:', this.opciones.length);
-  
-  if (!this.textoBusqueda || this.textoBusqueda.trim() === '') {
-    this.opcionesFiltradas = [...this.opciones];
-    console.log('🔍 [SearchableSelect] filtrarOpciones - SIN FILTRO, opciones:', this.opcionesFiltradas.length);
-  } else {
-    const busqueda = this.textoBusqueda.toLowerCase().trim();
-    this.opcionesFiltradas = this.opciones.filter(opcion => 
-      opcion.nombre.toLowerCase().includes(busqueda) ||
-      (opcion.telefono_whatsapp && opcion.telefono_whatsapp.toLowerCase().includes(busqueda))
-    );
-    console.log('🔍 [SearchableSelect] filtrarOpciones - CON FILTRO, resultados:', this.opcionesFiltradas.length);
+  filtrarOpciones() {
+    if (!this.textoBusqueda || this.textoBusqueda.trim() === '') {
+      this.opcionesFiltradas = [...this.opciones];
+    } else {
+      const busqueda = this.textoBusqueda.toLowerCase().trim();
+      this.opcionesFiltradas = this.opciones.filter(opcion => 
+        opcion.nombre.toLowerCase().includes(busqueda) ||
+        (opcion.telefono_whatsapp && opcion.telefono_whatsapp.toLowerCase().includes(busqueda))
+      );
+    }
   }
-}
 
-// MODIFICAR: onFocus() - Prevenir que se ejecute toggleDropdown después
-onFocus() {
-  console.log('🔍 [SearchableSelect] onFocus - abierto:', this.abierto, 'opciones:', this.opciones.length);
-  this.isFocused = true;
-  
-  // ✅ SOLO abrir si no está abierto y no hay una acción de toggle pendiente
-  if (!this.abierto && !this._togglePending) {
-    this.abierto = true;
-    this.filtrarOpciones();
-    console.log('🔍 [SearchableSelect] onFocus - abierto activado, opciones filtradas:', this.opcionesFiltradas.length);
+  // ✅ NUEVO: Manejar clic en el input
+  onInputClick(event: Event) {
+    event.stopPropagation();
+    if (this.disabled) return;
+    
+    console.log('🔄 [SearchableSelect] onInputClick - abierto:', this.abierto);
+    
+    // ✅ Toggle del dropdown
+    this.abierto = !this.abierto;
+    
+    if (this.abierto) {
+      this.filtrarOpciones();
+      // ✅ Enfocar el input de búsqueda después de abrir
+      setTimeout(() => {
+        if (this.searchInput) {
+          this.searchInput.nativeElement.focus();
+        }
+      }, 50);
+    }
+    
     this.cdr?.detectChanges();
   }
-}
 
-// MODIFICAR: toggleDropdown() - Prevenir la doble ejecución
-toggleDropdown(event?: Event) {
-  if (event) {
-    event.stopPropagation();
-    event.preventDefault(); // ✅ Prevenir comportamiento por defecto
+  // ✅ NUEVO: Manejar focus en el input
+  onInputFocus(event: Event) {
+    // ✅ No hacer nada, solo prevenir comportamientos no deseados
+    // El control lo maneja onInputClick
   }
-  if (this.disabled) return;
-  
-  // ✅ Si el dropdown ya está abierto, cerrarlo
-  // ✅ Si está cerrado, abrirlo
-  const nuevoEstado = !this.abierto;
-  
-  console.log('🔄 [SearchableSelect] toggleDropdown - antes:', this.abierto, 'nuevo:', nuevoEstado);
-  
-  // ✅ Marcar que hay una acción de toggle en progreso
-  this._togglePending = true;
-  
-  this.abierto = nuevoEstado;
-  
-  if (this.abierto) {
-    this.filtrarOpciones();
-    console.log('🔄 [SearchableSelect] toggleDropdown - opciones filtradas:', this.opcionesFiltradas.length);
-    setTimeout(() => {
-      if (this.inputElement) {
-        this.inputElement.nativeElement.focus();
-      }
-    }, 50);
-  }
-  
-  // ✅ Limpiar el flag después de un breve delay
-  setTimeout(() => {
-    this._togglePending = false;
-  }, 200);
-  
-  this.cdr?.detectChanges();
-}
-
-// Agregar propiedad para controlar el toggle
-private _togglePending: boolean = false;
-
-
-
-
-
 
   cerrarDropdown() {
     this.abierto = false;
-    this.isFocused = false;
     this.onTouched();
   }
 
-// MODIFICAR: onInputBlur() - No cerrar si hay toggle pendiente
-onInputBlur() {
-  if (!this.ignoreBlur && !this._togglePending) {
-    setTimeout(() => {
-      if (!this.isFocused && !this._togglePending) {
-        this.cerrarDropdown();
-      }
-    }, 200);
+  onInputBlur() {
+    if (!this.ignoreBlur) {
+      setTimeout(() => {
+        if (!this.abierto) {
+          // ✅ Si el dropdown no está abierto, no hacer nada
+        }
+      }, 200);
+    }
   }
-}
 
   seleccionarOpcion(opcion: any) {
     this.ignoreBlur = true;
@@ -462,7 +449,6 @@ onInputBlur() {
     }
     
     this.abierto = false;
-    this.isFocused = false;
     
     this.selectionChange.emit(opcion);
     this.onChange(opcion ? opcion.id : null);
@@ -476,10 +462,6 @@ onInputBlur() {
     event.stopPropagation();
     this.textoBusqueda = '';
     this.filtrarOpciones();
-    // ✅ Mantener abierto si hay opciones
-    if (this.opciones.length > 0) {
-      this.abierto = true;
-    }
   }
 
   writeValue(value: any): void {
@@ -499,7 +481,6 @@ onInputBlur() {
       return;
     }
     
-    // Buscar por ID
     let opcion = null;
     if (typeof value === 'object' && value !== null && value.id !== undefined) {
       opcion = this.opciones.find(o => o.id === value.id);
