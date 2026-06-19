@@ -906,12 +906,25 @@ getContadorPendientesNoVencidas(): number {
   ).length;
 }
 
+// ordenes.component.ts - REEMPLAZAR getContadorVencidas
+
 getContadorVencidas(): number {
-  return this.ordenes.filter(o => 
-    o.estado === 'pendiente' && 
-    this.isVencida(o) && 
-    this.calcularSaldo(o) > 0
-  ).length;
+    return this.ordenes.filter(o => {
+        if (o.estado !== 'pendiente') return false;
+        if (this.calcularSaldo(o) <= 0) return false;
+        
+        // ✅ Verificar si al menos un servicio está vencido
+        if (!o.detalles || o.detalles.length === 0) return false;
+        
+        for (const detalle of o.detalles) {
+            if (detalle.fecha_limite) {
+                if (this.isFechaVencida(detalle.fecha_limite, detalle.hora_limite)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }).length;
 }
 
 getContadorTerminados(): number {
