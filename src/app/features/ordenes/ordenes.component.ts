@@ -451,13 +451,13 @@ filtrarOrdenes() {
       }
     }
     
-    // FILTRO POR VENCIDAS (desde el botón Vencidas)
+  // FILTRO POR VENCIDAS (desde el botón Vencidas)
     if (this.filtros.vencidas) {
       const saldo = this.calcularSaldo(orden);
       // Solo órdenes pendientes, con saldo > 0, y que estén vencidas
       if (orden.estado !== 'pendiente') return false;
       if (saldo <= 0) return false;
-      if (!this.isVencida(orden)) return false;
+      if (!this.isVencida(orden)) return false; // Al menos un servicio vencido
     }
     
     // Filtro para ocultar órdenes pagadas/terminadas (cuando no hay filtros activos)
@@ -542,11 +542,40 @@ get filtrosActivosCount(): number {
 
 // ordenes.component.ts - Reemplazar isVencida
 
-// Luego modificar el método isVencida (busca este método en tu archivo)
+// ordenes.component.ts - MODIFICAR isVencida()
+
+/**
+ * Verifica si una orden está vencida
+ * Una orden está vencida si AL MENOS UNO de sus servicios tiene fecha límite pasada
+ */
 isVencida(orden: any): boolean {
-  if (!orden.fecha_limite || orden.estado === 'terminado') return false;
+  if (orden.estado === 'terminado') return false;
   const saldo = this.calcularSaldo(orden);
   if (saldo <= 0) return false;
+  
+  // ✅ Si no tiene detalles, usar fecha_limite de la orden (legacy)
+  if (!orden.detalles || orden.detalles.length === 0) {
+    if (!orden.fecha_limite) return false;
+    return this.isFechaVencida(orden.fecha_limite, orden.hora_limite);
+  }
+  
+  // ✅ Verificar cada detalle (servicio)
+  for (const detalle of orden.detalles) {
+    if (detalle.fecha_limite) {
+      if (this.isFechaVencida(detalle.fecha_limite, detalle.hora_limite)) {
+        return true; // Al menos un servicio está vencido
+      }
+    }
+  }
+  
+  return false; // Ningún servicio está vencido
+}
+
+/**
+ * Método auxiliar para verificar si una fecha/hora está vencida
+ */
+private isFechaVencida(fecha: string, hora?: string): boolean {
+  if (!fecha) return false;
   
   let ahora: Date;
   if (this.fechaHoraTimestamp > 0) {
@@ -555,26 +584,38 @@ isVencida(orden: any): boolean {
     ahora = new Date();
   }
   
-  const [yearL, monthL, dayL] = orden.fecha_limite.split('-').map(Number);
-  let hora = 23, minutos = 59, segundos = 59;
+  const [year, month, day] = fecha.split('-').map(Number);
+  let horas = 23, minutos = 59, segundos = 59;
   
-  if (orden.hora_limite) {
-    const horaParts = orden.hora_limite.split(':');
-    hora = parseInt(horaParts[0]);
-    minutos = parseInt(horaParts[1]);
+  if (hora) {
+    const parts = hora.split(':');
+    horas = parseInt(parts[0]);
+    minutos = parseInt(parts[1]);
     segundos = 0;
   }
   
-  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
-  const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
-  
-  // ✅ Log solo si debug está activado y solo para órdenes específicas
-  if (this.debugService.logVencidas && (orden.id === 103 || orden.id_externo?.includes('test'))) {
-    const diffMin = Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000);
-    console.log(`📅 Orden #${orden.id}: ${diffMin} min, ${esVencida ? 'VENCIDA' : 'OK'}`);
+  const fechaLimite = new Date(year, month - 1, day, horas, minutos, segundos);
+  return ahora.getTime() > fechaLimite.getTime();
+}
+
+/**
+ * Verifica si TODOS los servicios de una orden están vencidos
+ * (Para mostrar en la vista de vencidas, una orden con al menos un servicio vencido ya cuenta)
+ */
+isCompletamenteVencida(orden: any): boolean {
+  if (orden.estado === 'terminado') return false;
+  if (!orden.detalles || orden.detalles.length === 0) {
+    return this.isVencida(orden);
   }
   
-  return esVencida;
+  for (const detalle of orden.detalles) {
+    if (detalle.fecha_limite) {
+      if (!this.isFechaVencida(detalle.fecha_limite, detalle.hora_limite)) {
+        return false; // Un servicio no está vencido, la orden no está completamente vencida
+      }
+    }
+  }
+  return true; // Todos los servicios están vencidos
 }
   // Método para agregar pago
 agregarPago(orden: any) {

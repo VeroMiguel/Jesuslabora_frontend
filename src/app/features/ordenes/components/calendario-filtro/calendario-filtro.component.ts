@@ -1,4 +1,5 @@
-// calendario-filtro.component.ts
+// calendario-filtro.component.ts - VERSIÓN CORREGIDA
+
 import { Component, OnInit, OnDestroy, Output, EventEmitter, Input, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -33,6 +34,9 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   cargando: boolean = false;
   calendarApi: any = null;
   
+  // ✅ NUEVO: Almacenar fecha/hora actual del servidor
+  private fechaHoraActual: Date = new Date();
+  
   private subscriptions: Subscription[] = [];
   
   // ✅ CALENDAR OPTIONS CORREGIDO PARA FULLCALENDAR V6
@@ -51,7 +55,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
       today: 'Hoy',
       month: 'Mes'
     },
-    // ✅ En FullCalendar v6 se usa dayMaxEvents en lugar de eventLimit
     dayMaxEvents: 3,
     moreLinkText: 'más',
     events: this.cargarEventos.bind(this),
@@ -77,9 +80,30 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   ) {}
   
   ngOnInit() {
+    // ✅ Obtener fecha/hora del servidor
+    this.obtenerFechaHoraServidor();
+    
     if (this.doctores.length === 0) {
       this.cargarDoctores();
     }
+  }
+  
+  // ✅ NUEVO: Método para obtener fecha/hora del servidor
+  obtenerFechaHoraServidor() {
+    this.subscriptions.push(
+      this.ordenService.getFechaHoraServidor().subscribe({
+        next: (respuesta) => {
+          this.fechaHoraActual = new Date(respuesta.timestamp);
+          console.log('🕐 Calendario - Fecha/hora servidor:', this.fechaHoraActual.toLocaleString('es-PE'));
+        },
+        error: (error) => {
+          console.error('Error obteniendo fecha/hora del servidor:', error);
+          // Fallback a fecha local
+          this.fechaHoraActual = new Date();
+          console.log('🕐 Calendario - Usando fecha local:', this.fechaHoraActual.toLocaleString('es-PE'));
+        }
+      })
+    );
   }
   
   ngAfterViewInit() {
@@ -112,6 +136,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     );
   }
 
+  // ✅ MODIFICAR: cargarEventos() usando this.fechaHoraActual
   cargarEventos(info: any, successCallback: any, failureCallback: any) {
     const fechaInicio = info.startStr.split('T')[0];
     const fechaFin = info.endStr.split('T')[0];
@@ -139,6 +164,10 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
           
           const eventos: any[] = [];
           
+          // ✅ Usar this.fechaHoraActual (obtenida del servidor)
+          const ahora = this.fechaHoraActual || new Date();
+          console.log('🕐 Fecha actual para colores:', ahora.toLocaleString('es-PE'));
+          
           ordenes.forEach(orden => {
             if (orden.detalles && orden.detalles.length > 0) {
               orden.detalles.forEach((detalle: any) => {
@@ -152,18 +181,34 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
                 
                 if (!fechaEvento) return;
                 
-                let color = '#6366f1';
+                let color = '#6366f1'; // Morado por defecto (Normal)
                 
-                if (orden.estado === 'terminado') {
-                  color = '#10b981';
-                } else if (this.tipoFecha === 'limite' && detalle.fecha_limite) {
-                  const hoy = new Date();
-                  const fechaLimite = new Date(detalle.fecha_limite);
-                  if (fechaLimite < hoy) {
-                    color = '#f43f5e';
-                  } else if (fechaLimite < new Date(hoy.setDate(hoy.getDate() + 2))) {
-                    color = '#f59e0b';
+                // ✅ Solo evaluar si es fecha límite
+                if (this.tipoFecha === 'limite' && detalle.fecha_limite) {
+                  // ✅ Crear fecha límite COMPLETA con hora
+                  const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
+                  let hora = 23, minutos = 59, segundos = 59;
+                  
+                  if (detalle.hora_limite) {
+                    const horaParts = detalle.hora_limite.split(':');
+                    hora = parseInt(horaParts[0]);
+                    minutos = parseInt(horaParts[1]);
+                    segundos = 0;
                   }
+                  
+                  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
+                  
+                  // ✅ Comparar con la fecha actual (con hora)
+                  if (ahora.getTime() > fechaLimiteCompleta.getTime()) {
+                    color = '#f43f5e'; // 🔴 ROJO - Vencido
+                  } 
+                  // ✅ Próximo a vencer (menos de 48 horas)
+                  else if (fechaLimiteCompleta.getTime() - ahora.getTime() < 48 * 60 * 60 * 1000) {
+                    color = '#f59e0b'; // 🟡 AMARILLO - Próximo a vencer
+                  }
+                  // Si no, queda MORADO (Normal)
+                } else if (orden.estado === 'terminado') {
+                  color = '#10b981'; // 🟢 VERDE - Terminado
                 }
                 
                 const doctorNombre = orden.doctor?.nombre?.substring(0, 20) || 'Sin doctor';
@@ -300,7 +345,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     });
   }
 
-  // ✅ MÉTODO PARA CUANDO SE SELECCIONA UN DOCTOR
   onDoctorSeleccionado(doctor: any) {
     console.log('👨‍⚕️ Doctor seleccionado:', doctor?.nombre || 'Todos');
     this.doctorSeleccionado = doctor;

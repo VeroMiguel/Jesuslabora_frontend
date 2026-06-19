@@ -44,6 +44,7 @@
   padding: 4px;
 }
 
+/* Asegurar que el texto sea visible */
 .radio-label {
   display: flex;
   align-items: center;
@@ -53,6 +54,8 @@
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.85rem;
+  color: var(--txt, #0f172a);  /* ✅ AGREGAR: color visible */
+  font-weight: 500;            /* ✅ AGREGAR: un poco más grueso */
 }
 
 .radio-label input {
