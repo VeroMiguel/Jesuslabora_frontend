@@ -21,6 +21,7 @@ export interface DetalleServicio {
   imagen_nombre?: string;
   imagen_preview?: string;
   imagen_file?: File;
+  pago_inicial?: number; // ✅ NUEVO
 }
 
 @Component({

@@ -209,76 +209,102 @@ cargarOrden() {
     this.previewUrl = null;
   }
 
- // orden-form.component.ts - MODIFICAR onSubmit()
+// orden-form.component.ts - MODIFICAR onSubmit()
+
 async onSubmit() {
-    const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
+  const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
+  
+  if (detallesValidos.length === 0) {
+    Swal.fire('Error', 'Debe agregar al menos un servicio válido', 'error');
+    return;
+  }
+  
+  if (!this.ordenForm.valid) {
+    Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
+    return;
+  }
+  
+  const formValue = this.ordenForm.value;
+  const clienteGlobal = this.multiServicioSelector?.clienteUnico || { nombre: '', detalle: '' };
+  
+  // ✅ Construir detalles - MEJORADO
+  const detallesParaEnviar = detallesValidos.map((d: any) => {
+    // ✅ Si es edición y hay una imagen URL existente, conservarla
+    // ✅ Si es edición y hay una imagen nueva (imagen_file), enviar null para que el backend la reemplace
+    // ✅ Si es creación, enviar null (la imagen se subirá después)
+    const imagenUrl = this.esEdicion && d.imagen_url && !d.imagen_file 
+      ? d.imagen_url  // Conservar imagen existente
+      : null;         // Si hay imagen nueva o es creación, enviar null
     
-    if (detallesValidos.length === 0) {
-        Swal.fire('Error', 'Debe agregar al menos un servicio válido', 'error');
-        return;
-    }
-    
-    if (!this.ordenForm.valid) {
-        Swal.fire('Error', 'Por favor complete todos los campos requeridos', 'error');
-        return;
-    }
-    
-    const formValue = this.ordenForm.value;
-    const clienteGlobal = this.multiServicioSelector?.clienteUnico || { nombre: '', detalle: '' };
-    
-    // ✅ Incluir imagen_url existente en los detalles
-    const datosParaEnviar = {
-        doctor_id: formValue.doctor_id,
-        detalles: detallesValidos.map((d: any) => ({
-            servicio_id: d.servicio_id,
-            precio_unitario: Number(d.precio_unitario),
-            fecha_limite: d.fecha_limite || null,
-            hora_limite: d.hora_limite || null,
-            cliente_nombre: this.tipoCliente === 'multiple' ? (d.cliente_nombre || null) : null,
-            detalle_cliente: this.tipoCliente === 'multiple' ? (d.detalle_cliente || null) : null,
-            imagen_referencia_url: d.imagen_url || null  // ✅ Enviar URL existente
-        })),
-        pago_inicial: Number(formValue.pago_inicial) || 0,
-        prioridad: formValue.prioridad,
-        cliente_nombre: this.tipoCliente === 'unico' ? (clienteGlobal.nombre || null) : null,
-        detalle_cliente: this.tipoCliente === 'unico' ? (clienteGlobal.detalle || null) : null
+    return {
+      servicio_id: d.servicio_id,
+      precio_unitario: Number(d.precio_unitario),
+      fecha_limite: d.fecha_limite || null,
+      hora_limite: d.hora_limite || null,
+      cliente_nombre: this.tipoCliente === 'multiple' ? (d.cliente_nombre || null) : null,
+      detalle_cliente: this.tipoCliente === 'multiple' ? (d.detalle_cliente || null) : null,
+      imagen_referencia_url: imagenUrl,
+      pago_inicial: this.tipoCliente === 'multiple' ? (Number(d.pago_inicial) || 0) : 0
     };
-    
-    console.log('📤 Enviando orden:', JSON.stringify(datosParaEnviar, null, 2));
-    
-    this.subiendoImagen = true;
-    
-    const ordenServiceMethod = this.esEdicion && this.ordenId 
-        ? this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar)
-        : this.ordenService.crearOrden(datosParaEnviar);
-    
-    ordenServiceMethod.subscribe({
-        next: async (respuesta: any) => {
-            const ordenCreada = respuesta.orden || respuesta;
-            const ordenId = ordenCreada.id;
-            
-            // ✅ Subir NUEVAS imágenes (solo las que son archivos nuevos)
-            if (ordenId && this.detallesIniciales) {
-                for (let i = 0; i < this.detallesIniciales.length; i++) {
-                    const detalle = this.detallesIniciales[i];
-                    // ✅ Solo subir si es un archivo NUEVO (no una URL existente)
-                    if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
-                        const detalleId = ordenCreada.detalles[i].id;
-                        await this.subirImagenDetalle(detalleId, detalle.imagen_file);
-                    }
-                }
+  });
+  
+  // ✅ Calcular pago_inicial total
+  let pagoInicialTotal = 0;
+  if (this.tipoCliente === 'multiple') {
+    pagoInicialTotal = detallesValidos.reduce((sum, d) => sum + (Number(d.pago_inicial) || 0), 0);
+  } else {
+    pagoInicialTotal = Number(formValue.pago_inicial) || 0;
+  }
+  
+  const datosParaEnviar = {
+    doctor_id: formValue.doctor_id,
+    detalles: detallesParaEnviar,
+    pago_inicial: pagoInicialTotal,
+    prioridad: formValue.prioridad,
+    cliente_nombre: this.tipoCliente === 'unico' ? (clienteGlobal.nombre || null) : null,
+    detalle_cliente: this.tipoCliente === 'unico' ? (clienteGlobal.detalle || null) : null
+  };
+  
+  console.log('📤 Enviando orden:', JSON.stringify(datosParaEnviar, null, 2));
+  
+  this.subiendoImagen = true;
+  
+  const ordenServiceMethod = this.esEdicion && this.ordenId 
+    ? this.ordenService.actualizarOrden(this.ordenId, datosParaEnviar)
+    : this.ordenService.crearOrden(datosParaEnviar);
+  
+  ordenServiceMethod.subscribe({
+    next: async (respuesta: any) => {
+      const ordenCreada = respuesta.orden || respuesta;
+      const ordenId = ordenCreada.id;
+      
+      // ✅ Subir imágenes SOLO si hay archivos nuevos
+      if (ordenId && this.detallesIniciales) {
+        for (let i = 0; i < this.detallesIniciales.length; i++) {
+          const detalle = this.detallesIniciales[i];
+          // ✅ Solo subir si hay un archivo NUEVO
+          if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
+            const detalleId = ordenCreada.detalles[i].id;
+            try {
+              await this.subirImagenDetalle(detalleId, detalle.imagen_file);
+              console.log(`✅ Imagen subida para detalle ${detalleId}`);
+            } catch (error) {
+              console.error(`❌ Error subiendo imagen para detalle ${detalleId}:`, error);
             }
-            
-            this.subiendoImagen = false;
-            Swal.fire('¡Éxito!', `Orden ${this.esEdicion ? 'actualizada' : 'creada'} correctamente`, 'success');
-            this.router.navigate(['/ordenes']);
-        },
-        error: (error: any) => {
-            this.subiendoImagen = false;
-            console.error('Error:', error);
-            Swal.fire('Error', error.error?.error || error.error?.details || 'No se pudo procesar la orden', 'error');
+          }
         }
-    });
+      }
+      
+      this.subiendoImagen = false;
+      Swal.fire('¡Éxito!', `Orden ${this.esEdicion ? 'actualizada' : 'creada'} correctamente`, 'success');
+      this.router.navigate(['/ordenes']);
+    },
+    error: (error: any) => {
+      this.subiendoImagen = false;
+      console.error('Error:', error);
+      Swal.fire('Error', error.error?.error || error.error?.details || 'No se pudo procesar la orden', 'error');
+    }
+  });
 }
 
   async subirImagenDetalle(detalleId: number, file: File): Promise<void> {

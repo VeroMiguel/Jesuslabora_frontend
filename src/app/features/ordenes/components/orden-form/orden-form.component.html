@@ -38,22 +38,38 @@
 ></app-multi-servicio-selector>
     </div>
 
-    <!-- Pago Inicial y Prioridad -->
-    <div class="form-row">
-      <div class="form-group">
-        <label>Pago Inicial (S/)</label>
-        <input type="number" formControlName="pago_inicial" class="form-control" step="0.01" min="0">
-      </div>
+<!-- orden-form.component.html - MODIFICAR SECCIÓN DE PAGO INICIAL Y PRIORIDAD -->
 
-      <div class="form-group">
-        <label>Prioridad</label>
-        <select formControlName="prioridad" class="form-control">
-          <option value="normal">Normal</option>
-          <option value="urgente">Urgente</option>
-          <option value="emergencia">Emergencia</option>
-        </select>
-      </div>
-    </div>
+<!-- ✅ Mostrar Pago Inicial y Prioridad SOLO si es cliente único -->
+<div class="form-row" *ngIf="tipoCliente === 'unico'">
+  <div class="form-group">
+    <label>Pago Inicial (S/)</label>
+    <input type="number" formControlName="pago_inicial" class="form-control" step="0.01" min="0">
+  </div>
+
+  <div class="form-group">
+    <label>Prioridad</label>
+    <select formControlName="prioridad" class="form-control">
+      <option value="normal">Normal</option>
+      <option value="urgente">Urgente</option>
+      <option value="emergencia">Emergencia</option>
+    </select>
+  </div>
+</div>
+
+<!-- ✅ Cuando es cliente diferente por servicio, mostrar pago inicial en cada servicio -->
+<div class="form-row" *ngIf="tipoCliente === 'multiple'">
+  <div class="form-group">
+    <label>Prioridad</label>
+    <select formControlName="prioridad" class="form-control">
+      <option value="normal">Normal</option>
+      <option value="urgente">Urgente</option>
+      <option value="emergencia">Emergencia</option>
+    </select>
+  </div>
+</div>
+
+<!-- ⚠️ NOTA: El pago inicial por servicio se maneja dentro de MultiServicioSelectorComponent -->
 
     <!-- ✅ ELIMINADO: Cliente, Detalle del Caso, Imagen de Referencia -->
 

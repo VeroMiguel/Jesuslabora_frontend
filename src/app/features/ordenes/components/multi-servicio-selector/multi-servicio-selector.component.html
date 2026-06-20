@@ -96,6 +96,18 @@
           <input type="time" [(ngModel)]="detalle.hora_limite" placeholder="Hora" class="hora-input" step="60">
         </div>
 
+ <!-- ✅ Pago Inicial por Servicio (solo cuando tipoCliente === 'multiple') -->
+  <div class="pago-inicial-servicio" *ngIf="tipoCliente === 'multiple'">
+    <label>Pago Inicial (S/)</label>
+    <input type="number" [(ngModel)]="detalle.pago_inicial" 
+           (change)="calcularTotal()" 
+           step="0.01" min="0" 
+           class="pago-inicial-input"
+           placeholder="0.00">
+  </div>
+
+
+
         <!-- Cliente por servicio (solo si tipoCliente === 'multiple') -->
         <div class="cliente-servicio" *ngIf="tipoCliente === 'multiple'">
           <input type="text" [(ngModel)]="detalle.cliente_nombre" placeholder="Nombre del cliente" class="cliente-input-servicio">

@@ -1184,3 +1184,88 @@
     word-break: break-word;
   }
 }
+/* orden-detalle.component.css - AGREGAR ESTILOS */
+
+.btn-pagar-servicio {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-pagar-servicio:hover {
+  background: #059669;
+  transform: scale(1.05);
+}
+
+.btn-pagar-servicio i {
+  font-size: 0.65rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .servicio-detalle-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  
+  .btn-pagar-servicio {
+    padding: 4px 10px;
+    font-size: 0.65rem;
+  }
+}
+/* orden-detalle.component.css - AGREGAR ESTILOS */
+
+.pago-referencia {
+  font-size: 0.75rem;
+  color: var(--mut, #64748b);
+  background: var(--in, #f1f5f9);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pago-servicio {
+  font-size: 0.7rem;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* orden-detalle.component.css - AGREGAR ESTILOS */
+
+.pago-referencia {
+  font-size: 0.75rem;
+  color: var(--mut, #64748b);
+  background: var(--in, #f1f5f9);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pago-servicio {
+  font-size: 0.7rem;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

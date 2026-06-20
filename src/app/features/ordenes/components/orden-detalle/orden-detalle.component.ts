@@ -690,4 +690,226 @@ onImageError(event: Event) {
   console.warn('Error cargando imagen, usando default');
 }
 
+/**
+ * Verifica si la orden tiene clientes diferentes por servicio
+ */
+tieneClientesDiferentes(): boolean {
+  if (!this.orden?.detalles || this.orden.detalles.length <= 1) return false;
+  
+  // ✅ Tipar explícitamente el parámetro 'd' como any
+  const clientes: string[] = this.orden.detalles
+    .map((d: any) => d.cliente_nombre)
+    .filter((c: string) => c && c.trim() !== '');
+  
+  // Si hay al menos un cliente definido y no todos son iguales
+  if (clientes.length === 0) return false;
+  
+  const primerCliente = clientes[0];
+  return clientes.some((c: string) => c !== primerCliente);
+}
+/**
+ * Verifica si la orden es para un solo cliente
+ */
+tieneClienteUnico(): boolean {
+  if (!this.orden?.detalles || this.orden.detalles.length === 0) return false;
+  
+  // Si la orden tiene cliente_nombre global
+  if (this.orden.cliente_nombre) return true;
+  
+  // Si todos los detalles tienen el mismo cliente
+  // ✅ Tipar explícitamente los parámetros
+  const clientes: string[] = this.orden.detalles
+    .map((d: any) => d.cliente_nombre)
+    .filter((c: string) => c && c.trim() !== '');
+  
+  if (clientes.length === 0) return false;
+  const primerCliente = clientes[0];
+  return clientes.every((c: string) => c === primerCliente);
+}
+/**
+ * Obtiene el nombre del cliente para un servicio
+ */
+getClienteServicio(detalle: any): string {
+  if (this.orden.cliente_nombre) return this.orden.cliente_nombre;
+  return detalle.cliente_nombre || 'Sin cliente';
+}
+
+/**
+ * Obtiene la deuda total de la orden
+ */
+getDeudaTotal(): number {
+  return this.saldo;
+}
+/**
+ * Obtiene la deuda por servicio (para clientes diferentes)
+ */
+getDeudaPorServicio(detalle: any): number {
+  if (!detalle) return 0;
+  
+  // Si la orden tiene cliente único, el pago se distribuye proporcionalmente
+  if (this.tieneClienteUnico()) {
+    const totalServicios = this.orden.detalles.length;
+    const precioServicio = parseFloat(detalle.precio_unitario) || 0;
+    // Distribuir el saldo proporcionalmente
+    const totalOrden = parseFloat(this.orden.total) || 1;
+    return (precioServicio / totalOrden) * this.saldo;
+  }
+  
+  // Para clientes diferentes, el saldo es el precio del servicio
+  return parseFloat(detalle.precio_unitario) || 0;
+}
+
+/**
+ * Abre modal para pagar un servicio específico
+ */
+pagarServicio(detalle: any, index: number) {
+  const montoMaximo = this.getDeudaPorServicio(detalle);
+  const cliente = this.getClienteServicio(detalle);
+  const servicioNombre = detalle.servicio?.nombre || 'Servicio';
+  
+  if (montoMaximo <= 0) {
+    Swal.fire('Info', `El servicio "${servicioNombre}" ya está pagado`, 'info');
+    return;
+  }
+
+  Swal.fire({
+    title: `Pagar Servicio: ${servicioNombre}`,
+    html: `
+      <div style="text-align: left; margin-bottom: 16px;">
+        <p><strong>Cliente:</strong> ${cliente}</p>
+        <p><strong>Servicio:</strong> ${servicioNombre}</p>
+        <p><strong>Precio:</strong> ${this.monedaPipe.transform(detalle.precio_unitario)}</p>
+        <p><strong>Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}</p>
+      </div>
+      <input type="number" id="monto" class="swal2-input" 
+             placeholder="Monto (S/)" step="0.01" min="0.01" 
+             max="${montoMaximo}" value="${montoMaximo.toFixed(2)}">
+      <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
+        <option value="efectivo">Efectivo</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="yape">Yape</option>
+        <option value="plin">Plin</option>
+      </select>
+      <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
+      <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+        <i class="fas fa-info-circle"></i> Este pago se registrará para el servicio "${servicioNombre}"
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Registrar Pago',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const monto = (document.getElementById('monto') as HTMLInputElement).value;
+      const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
+      const referencia = (document.getElementById('referencia') as HTMLInputElement).value;
+      
+      if (!monto || monto.trim() === '') {
+        Swal.showValidationMessage('Ingrese un monto');
+        return false;
+      }
+      
+      const montoNumerico = parseFloat(monto);
+      
+      if (isNaN(montoNumerico) || montoNumerico <= 0) {
+        Swal.showValidationMessage('Ingrese un monto válido mayor a 0');
+        return false;
+      }
+      
+      if (montoNumerico > montoMaximo) {
+        Swal.showValidationMessage(`El monto no puede exceder el saldo pendiente (${this.monedaPipe.transform(montoMaximo)})`);
+        return false;
+      }
+      
+      return { 
+        monto: montoNumerico, 
+        metodo_pago: metodo, 
+        referencia,
+        detalleId: detalle.id,
+        servicioNombre: servicioNombre,
+        cliente: cliente
+      };
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Registrar el pago con referencia al servicio
+      this.registrarPagoConDetalle(result.value);
+    }
+  });
+}
+
+// orden-detalle.component.ts - MODIFICAR registrarPagoConDetalle
+
+// orden-detalle.component.ts - MODIFICAR registrarPagoConDetalle
+
+/**
+ * Registra un pago asociado a un detalle específico
+ */
+registrarPagoConDetalle(data: any) {
+  const ordenId = this.orden.id;
+  
+  // ✅ Crear referencia más descriptiva y amigable
+  const referencia = `Pago para ${data.servicioNombre}`;
+  
+  console.log('📝 [DEBUG] Registrando pago para servicio:', {
+    orden_id: ordenId,
+    detalle_id: data.detalleId,
+    servicio: data.servicioNombre,
+    cliente: data.cliente,
+    monto: data.monto,
+    metodo: data.metodo_pago,
+    referencia: referencia
+  });
+  
+  this.subscriptions.push(
+    this.pagoService.registrarPago({
+      orden_id: Number(ordenId),
+      monto: data.monto,
+      metodo_pago: data.metodo_pago,
+      referencia: referencia,
+      // ✅ Guardar información del servicio en observaciones (SOLO para backend)
+      observaciones: JSON.stringify({
+        detalle_id: data.detalleId,
+        servicio: data.servicioNombre,
+        cliente: data.cliente
+      })
+    }).subscribe({
+      next: () => {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Pago registrado!',
+          text: `Pago de ${this.monedaPipe.transform(data.monto)} para "${data.servicioNombre}" registrado correctamente`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+        this.cargarOrden(this.orden.id);
+      },
+      error: (error) => {
+        console.error('❌ Error registrando pago:', error);
+        Swal.fire('Error', 'No se pudo registrar el pago', 'error');
+      }
+    })
+  );
+}
+// orden-detalle.component.ts - AGREGAR ESTE MÉTODO
+
+/**
+ * Determina si debe mostrarse el botón de "Agregar Pago" general
+ * Solo se muestra cuando la orden es para un solo cliente
+ */
+mostrarBotonAgregarPago(): boolean {
+  // Si la orden tiene cliente_nombre global (cliente único)
+  if (this.orden.cliente_nombre) {
+    return this.saldo > 0;
+  }
+  
+  // Si todos los detalles tienen el mismo cliente (cliente único)
+  if (this.tieneClienteUnico()) {
+    return this.saldo > 0;
+  }
+  
+  // Si tiene clientes diferentes, NO mostrar el botón general
+  return false;
+}
+
 }

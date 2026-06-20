@@ -25,7 +25,6 @@
       display: flex;
       gap: 15px;
     }
-
     .btn-secondary {
       background: var(--in, #f1f5f9);
       color: var(--txt, #0f172a);

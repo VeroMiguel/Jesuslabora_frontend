@@ -349,3 +349,42 @@
 .servicio-selector-wrapper {
   position: relative;
 }
+/* multi-servicio-selector.component.css - AGREGAR */
+
+.pago-inicial-servicio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pago-inicial-servicio label {
+  font-size: 0.7rem;
+  width: 90px;
+  color: var(--mut, #64748b);
+}
+
+.pago-inicial-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--in, #f8fafc);
+}
+
+.pago-inicial-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+@media (max-width: 480px) {
+  .pago-inicial-servicio {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .pago-inicial-servicio label {
+    width: 100%;
+  }
+}
