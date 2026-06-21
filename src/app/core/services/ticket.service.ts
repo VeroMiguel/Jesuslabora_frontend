@@ -1,4 +1,4 @@
-// ticket.service.ts - versión mejorada con descarga de imagen
+// ticket.service.ts - VERSIÓN ACTUALIZADA PARA DETALLES_ORDEN
 
 import { Injectable } from '@angular/core';
 import { saveAs } from 'file-saver';
@@ -83,11 +83,53 @@ export class TicketService {
     return Number(orden.pagos?.reduce((sum: number, p: any) => sum + Number(p.monto), 0)) || 0;
   }
 
+  /**
+   * ✅ Genera HTML del ticket usando detalles_orden
+   */
   generarHTMLTicket(orden: any): string {
     const total = Number(orden.total) || 0;
     const totalPagado = this.calcularTotalPagado(orden);
     const saldo = total - totalPagado;
 
+    // ✅ Obtener servicios, clientes y fechas límite desde detalles
+    const detalles = orden.detalles || [];
+    
+    // ✅ Construir lista de servicios
+    let serviciosHTML = '';
+    let clientesHTML = '';
+    let fechasLimiteHTML = '';
+    
+    if (detalles.length > 0) {
+      // Servicios
+      serviciosHTML = detalles.map((d: any, i: number) => {
+        const nombre = d.servicio?.nombre || 'Sin servicio';
+        const precio = this.formatearMoneda(d.precio_unitario);
+        const cantidad = d.cantidad || 1;
+        const cliente = d.cliente_nombre || orden.cliente_nombre || 'No especificado';
+        return `${i + 1}. ${nombre} x${cantidad} = ${precio} (${cliente})`;
+      }).join('<br>');
+      
+      // Clientes
+      const clientesUnicos = [...new Set(detalles.map((d: any) => d.cliente_nombre || orden.cliente_nombre || 'No especificado'))];
+      clientesHTML = clientesUnicos.join(', ');
+      
+      // Fechas límite
+      fechasLimiteHTML = detalles.map((d: any) => {
+        const fecha = d.fecha_limite ? this.formatearFecha(d.fecha_limite, 'dd/MM/yyyy') : 'Sin fecha';
+        const hora = d.hora_limite ? this.formatearHora(d.hora_limite) : '';
+        const nombre = d.servicio?.nombre || 'Sin servicio';
+        return `${nombre}: ${fecha} ${hora}`;
+      }).join('<br>');
+    } else {
+      // Fallback a datos de la orden principal (legacy)
+      serviciosHTML = orden.servicio?.nombre || 'No especificado';
+      clientesHTML = orden.cliente_nombre || 'No especificado';
+      const fechaLimite = orden.fecha_limite ? this.formatearFecha(orden.fecha_limite, 'dd/MM/yyyy') : 'Sin fecha';
+      const horaLimite = orden.hora_limite ? this.formatearHora(orden.hora_limite) : '';
+      fechasLimiteHTML = `${fechaLimite} ${horaLimite}`;
+    }
+
+    // ✅ Historial de pagos
     let historialPagosHTML = '';
     if (orden.pagos && orden.pagos.length > 0) {
       const pagosOrdenados = [...orden.pagos].sort((a, b) =>
@@ -103,6 +145,7 @@ export class TicketService {
                 <th style="text-align: left; padding: 8px 4px;">Fecha</th>
                 <th style="text-align: right; padding: 8px 4px;">Monto</th>
                 <th style="text-align: left; padding: 8px 4px;">Método</th>
+                <th style="text-align: left; padding: 8px 4px;">Referencia</th>
               </tr>
             </thead>
             <tbody>
@@ -116,19 +159,22 @@ export class TicketService {
           hour: '2-digit',
           minute: '2-digit'
         });
+        
+        // ✅ Mostrar referencia si existe (ej: "Pago para Corona")
+        const referencia = pago.referencia || '';
+        
         historialPagosHTML += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="text-align: left; padding: 8px 4px;">${fecha}</td>
             <td style="text-align: right; padding: 8px 4px; font-weight: 600; color: #10b981;">${this.formatearMoneda(pago.monto)}</td>
             <td style="text-align: left; padding: 8px 4px; text-transform: capitalize;">${pago.metodo_pago}</td>
+            <td style="text-align: left; padding: 8px 4px; font-size: 0.75rem; color: #64748b;">${referencia}</td>
           </tr>
         `;
       });
       historialPagosHTML += `</tbody></table></div>`;
     }
 
-    const fechaLimite = orden.fecha_limite ? this.formatearFecha(orden.fecha_limite, 'dd/MM/yyyy') : 'Sin fecha';
-    const horaLimite = orden.hora_limite ? this.formatearHora(orden.hora_limite) : '';
     const fechaRegistro = orden.fecha_registro ? this.formatearFecha(orden.fecha_registro, 'dd/MM/yyyy h:mm a') : new Date().toLocaleString('es-PE');
 
     return `
@@ -153,10 +199,21 @@ export class TicketService {
         <div style="margin-bottom: 20px;">
           <div style="background: #f8fafc; padding: 12px; border-radius: 12px; margin-bottom: 12px;">
             <p style="margin: 6px 0;"><strong style="color: #475569;">👨‍⚕️ Doctor:</strong> ${orden.doctor?.nombre || 'No especificado'}</p>
-            <p style="margin: 6px 0;"><strong style="color: #475569;">🔧 Servicio:</strong> ${orden.servicio?.nombre || 'No especificado'}</p>
-            <p style="margin: 6px 0;"><strong style="color: #475569;">👤 Cliente:</strong> ${orden.cliente_nombre || 'No especificado'}</p>
-            <p style="margin: 6px 0;"><strong style="color: #475569;">⏰ Límite:</strong> ${fechaLimite} ${horaLimite}</p>
+            <p style="margin: 6px 0;"><strong style="color: #475569;">📋 Servicios:</strong></p>
+            <div style="padding-left: 16px; font-size: 0.85rem; color: #475569;">
+              ${serviciosHTML || 'No especificado'}
+            </div>
+            <p style="margin: 6px 0; margin-top: 8px;"><strong style="color: #475569;">👤 Clientes:</strong> ${clientesHTML || 'No especificado'}</p>
           </div>
+          
+          ${fechasLimiteHTML ? `
+          <div style="background: #f8fafc; padding: 12px; border-radius: 12px;">
+            <p style="margin: 6px 0;"><strong style="color: #475569;">⏰ Fechas Límite:</strong></p>
+            <div style="padding-left: 16px; font-size: 0.85rem; color: #475569;">
+              ${fechasLimiteHTML}
+            </div>
+          </div>
+          ` : ''}
         </div>
         
         <div style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); padding: 16px; border-radius: 12px; margin-bottom: 20px;">
