@@ -21,6 +21,8 @@
         <h2>{{ orden.doctor?.nombre }}</h2>
    <!-- orden-detalle.component.html - MODIFICAR LA SECCIÓN DE SERVICIOS -->
 
+<!-- orden-detalle.component.html - AGREGAR OPCIÓN DE PAGO POR SERVICIO -->
+
 <div class="servicios-lista">
   <div *ngFor="let detalle of orden.detalles; let i = index" class="servicio-detalle-item">
     <div class="servicio-info">
@@ -39,8 +41,8 @@
       </span>
     </div>
     
-    <!-- ✅ Botón de pago por servicio (solo si tiene clientes diferentes) -->
-    <button *ngIf="tieneClientesDiferentes() && getDeudaPorServicio(detalle) > 0" 
+    <!-- ✅ Botón de pago por servicio (SIEMPRE visible si el saldo del servicio > 0) -->
+    <button *ngIf="getDeudaPorServicio(detalle) > 0" 
             class="btn-pagar-servicio"
             (click)="pagarServicio(detalle, i)"
             title="Pagar este servicio">

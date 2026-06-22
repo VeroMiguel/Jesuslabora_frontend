@@ -1,3 +1,5 @@
+// doctores-reporte.component.ts - COMPLETO CORREGIDO
+
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
@@ -19,8 +21,8 @@ import { ImagenPipe } from '../../../../shared/pipes/imagen.pipe';
 })
 export class DoctoresReporteComponent implements OnInit, OnDestroy {
   doctores: any[] = [];
-  doctoresFiltrados: any[] = [];  // Datos después de filtros
-  doctoresPaginados: any[] = [];  // Datos paginados
+  doctoresFiltrados: any[] = [];
+  doctoresPaginados: any[] = [];
   cargando = true;
   
   totalDoctores = 0;
@@ -32,13 +34,13 @@ export class DoctoresReporteComponent implements OnInit, OnDestroy {
   topDoctores: any[] = [];
   topDeudores: any[] = [];
   
-  // Paginación
   paginaActual: number = 1;
   itemsPerPage: number = 10;
   
-  // Filtros
   filtroNombre: string = '';
-  filtroDeuda: string = 'todos'; // todos, conDeuda, sinDeuda
+  filtroDeuda: string = 'todos';
+  filtroTipoCliente: string = 'todos';
+  filtroMes: string = '';
   
   private subscriptions: Subscription[] = [];
   
@@ -54,17 +56,31 @@ export class DoctoresReporteComponent implements OnInit, OnDestroy {
 
   cargarDatos() {
     this.cargando = true;
+    
+    const params: any = {};
+    if (this.filtroTipoCliente !== 'todos') {
+      params.tipo_cliente = this.filtroTipoCliente;
+    }
+    if (this.filtroMes) {
+      params.mes = this.filtroMes;
+    }
+    
+    console.log('🔍 Enviando filtros al backend:', params);
+    
     this.subscriptions.push(
-      this.reporteService.getReporteDoctores().subscribe({
+      this.reporteService.getReporteDoctores(params).subscribe({
         next: (data) => {
           this.doctores = data.doctores;
-          this.doctoresFiltrados = [...this.doctores];
           
+          // ✅ Calcular totales correctamente desde los datos recibidos
           this.totalDoctores = data.doctores.length;
-          this.deudaTotal = data.doctores.reduce((sum: number, d: any) => sum + (d.deuda_total || 0), 0);
-          this.totalPendientes = data.doctores.reduce((sum: number, d: any) => sum + (d.ordenes_pendientes || 0), 0);
           this.totalFacturado = data.doctores.reduce((sum: number, d: any) => sum + (d.total_facturado || 0), 0);
           this.totalPagado = data.doctores.reduce((sum: number, d: any) => sum + (d.total_pagado || 0), 0);
+          this.deudaTotal = data.doctores.reduce((sum: number, d: any) => sum + (d.deuda_total || 0), 0);
+          this.totalPendientes = data.doctores.reduce((sum: number, d: any) => sum + (d.ordenes_pendientes || 0), 0);
+          
+          console.log('📊 Datos recibidos:', this.doctores);
+          console.log('📊 Totales calculados:', { totalFacturado: this.totalFacturado, totalPagado: this.totalPagado, deudaTotal: this.deudaTotal });
           
           this.topDoctores = [...data.doctores]
             .sort((a, b) => b.total_ordenes - a.total_ordenes)
@@ -74,7 +90,7 @@ export class DoctoresReporteComponent implements OnInit, OnDestroy {
             .sort((a, b) => b.deuda_total - a.deuda_total)
             .slice(0, 5);
           
-          this.aplicarFiltros();
+          this.aplicarFiltrosFrontend();
           this.cargando = false;
           this.cdr.detectChanges();
         },
@@ -87,33 +103,35 @@ export class DoctoresReporteComponent implements OnInit, OnDestroy {
     );
   }
 
- // doctores-reporte.component.ts - Modifica aplicarFiltros()
+  aplicarFiltrosFrontend() {
+    let filtrados = [...this.doctores];
+    
+    if (this.filtroNombre.trim()) {
+      const termino = this.filtroNombre.toLowerCase();
+      filtrados = filtrados.filter(d => d.doctor.toLowerCase().includes(termino));
+    }
+    
+    if (this.filtroDeuda === 'conDeuda') {
+      filtrados = filtrados.filter(d => d.deuda_total > 0);
+    } else if (this.filtroDeuda === 'sinDeuda') {
+      filtrados = filtrados.filter(d => d.deuda_total === 0);
+    }
+    
+    this.doctoresFiltrados = filtrados;
+    this.paginaActual = 1;
+    this.actualizarPaginacion();
+  }
 
-aplicarFiltros() {
-  let filtrados = [...this.doctores];
-  
-  // ✅ Filtro por nombre - Usa 'doctor' en lugar de 'nombre'
-  if (this.filtroNombre.trim()) {
-    const termino = this.filtroNombre.toLowerCase();
-    filtrados = filtrados.filter(d => d.doctor.toLowerCase().includes(termino)); // ← Cambiado: d.doctor
+  aplicarFiltros() {
+    this.cargarDatos();
   }
-  
-  // Filtro por deuda (esto está bien porque deuda_total sí existe)
-  if (this.filtroDeuda === 'conDeuda') {
-    filtrados = filtrados.filter(d => d.deuda_total > 0);
-  } else if (this.filtroDeuda === 'sinDeuda') {
-    filtrados = filtrados.filter(d => d.deuda_total === 0);
-  }
-  
-  this.doctoresFiltrados = filtrados;
-  this.paginaActual = 1;
-  this.actualizarPaginacion();
-}
 
   limpiarFiltros() {
     this.filtroNombre = '';
     this.filtroDeuda = 'todos';
-    this.aplicarFiltros();
+    this.filtroTipoCliente = 'todos';
+    this.filtroMes = '';
+    this.cargarDatos();
   }
 
   actualizarPaginacion() {
@@ -193,7 +211,25 @@ aplicarFiltros() {
       })
     );
   }
-  
+
+  exportarDoctor(doctorId: number, doctorNombre: string) {
+    this.reporteService.exportarReportePorDoctor(doctorId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `reporte_doctor_${doctorNombre.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+        Swal.fire('Éxito', `Reporte de ${doctorNombre} exportado correctamente`, 'success');
+      },
+      error: (error) => {
+        console.error('Error exportando reporte del doctor:', error);
+        Swal.fire('Error', 'No se pudo exportar el reporte del doctor', 'error');
+      }
+    });
+  }
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => {
       if (sub && typeof sub.unsubscribe === 'function') {
@@ -202,22 +238,4 @@ aplicarFiltros() {
     });
     console.log('🧹 DoctoresReporteComponent destruido');
   }
-  // Agregar en DoctoresReporteComponent
-exportarDoctor(doctorId: number, doctorNombre: string) {
-    this.reporteService.exportarReportePorDoctor(doctorId).subscribe({
-        next: (blob) => {
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `reporte_doctor_${doctorNombre.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
-            link.click();
-            window.URL.revokeObjectURL(url);
-            Swal.fire('Éxito', `Reporte de ${doctorNombre} exportado correctamente`, 'success');
-        },
-        error: (error) => {
-            console.error('Error exportando reporte del doctor:', error);
-            Swal.fire('Error', 'No se pudo exportar el reporte del doctor', 'error');
-        }
-    });
-}
 }

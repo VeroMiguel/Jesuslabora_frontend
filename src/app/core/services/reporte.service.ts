@@ -17,25 +17,30 @@ export class ReporteService {
       .set('fechaInicio', fechaInicio)
       .set('fechaFin', fechaFin)
       .set('grupo', grupo);
-    
     return this.http.get(`${this.apiUrl}/ingresos`, { params });
   }
 
-   getReporteDoctores(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/doctores`).pipe(
+  // ✅ MODIFICADO: Acepta parámetros de filtro
+  getReporteDoctores(params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    
+    if (params) {
+      if (params.tipo_cliente) {
+        httpParams = httpParams.set('tipo_cliente', params.tipo_cliente);
+      }
+      if (params.mes) {
+        httpParams = httpParams.set('mes', params.mes);
+      }
+    }
+    
+    return this.http.get(`${this.apiUrl}/doctores`, { params: httpParams }).pipe(
       map((data: any) => {
-        // Procesar los datos para agregar campos necesarios y estandarizar 'id'
         const doctores = data.doctores.map((doctor: any) => ({
           ...doctor,
-          // ----> CAMBIO AQUÍ <----
-          // Crear una propiedad 'id' basada en 'doctorId' del backend.
-          // Si el backend ya envía 'id', esto lo sobrescribirá con el valor correcto.
-          id: doctor.doctorId || doctor.id, 
-          // doctorId: doctor.id, // (Opción alternativa: podrías mantener doctorId y cambiar la plantilla, pero es menos estándar)
+          id: doctor.doctorId || doctor.id,
           telefono_whatsapp: doctor.telefono || doctor.telefono_whatsapp,
           proxima_entrega: doctor.proxima_entrega || this.calcularProximaEntrega(doctor.ordenes)
         }));
-        
         return {
           ...data,
           doctores
@@ -44,14 +49,11 @@ export class ReporteService {
     );
   }
 
-
   private calcularProximaEntrega(ordenes: any[]): string | null {
     if (!ordenes || ordenes.length === 0) return null;
-    
     const pendientes = ordenes
       .filter(o => o.estado === 'pendiente' && o.fecha_limite)
       .sort((a, b) => new Date(a.fecha_limite).getTime() - new Date(b.fecha_limite).getTime());
-    
     return pendientes.length > 0 ? pendientes[0].fecha_limite : null;
   }
 
@@ -74,7 +76,6 @@ export class ReporteService {
         httpParams = httpParams.set(key, params[key]);
       });
     }
-    
     return this.http.get(`${this.apiUrl}/exportar/${tipo}`, {
       params: httpParams,
       responseType: 'blob'
@@ -85,10 +86,9 @@ export class ReporteService {
     return this.http.get(`${this.apiUrl}/tendencia-mensual`);
   }
 
-// Exportar reporte por doctor específico
-exportarReportePorDoctor(doctorId: number): Observable<Blob> {
+  exportarReportePorDoctor(doctorId: number): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/exportar/doctor/${doctorId}`, {
-        responseType: 'blob'
+      responseType: 'blob'
     });
-}
+  }
 }

@@ -740,28 +740,51 @@ getClienteServicio(detalle: any): string {
 getDeudaTotal(): number {
   return this.saldo;
 }
+// orden-detalle.component.ts - MODIFICAR getDeudaPorServicio()
+
+// orden-detalle.component.ts - AGREGAR/MODIFICAR ESTOS MÉTODOS
+
+// orden-detalle.component.ts - MODIFICAR getDeudaPorServicio()
+
 /**
- * Obtiene la deuda por servicio (para clientes diferentes)
+ * Obtiene la deuda por servicio
+ * ✅ AHORA FUNCIONA PARA CLIENTE ÚNICO Y CLIENTES DIFERENTES
  */
 getDeudaPorServicio(detalle: any): number {
   if (!detalle) return 0;
   
-  // Si la orden tiene cliente único, el pago se distribuye proporcionalmente
+  const precioServicio = parseFloat(detalle.precio_unitario) || 0;
+  
+  // ✅ Si la orden tiene cliente único, distribuir proporcionalmente
   if (this.tieneClienteUnico()) {
     const totalServicios = this.orden.detalles.length;
-    const precioServicio = parseFloat(detalle.precio_unitario) || 0;
-    // Distribuir el saldo proporcionalmente
     const totalOrden = parseFloat(this.orden.total) || 1;
     return (precioServicio / totalOrden) * this.saldo;
   }
   
-  // Para clientes diferentes, el saldo es el precio del servicio
-  return parseFloat(detalle.precio_unitario) || 0;
+  // ✅ Para clientes diferentes: calcular pagos específicos de este servicio
+  const pagosDelServicio = this.orden.pagos?.filter((pago: any) => {
+    if (!pago.observaciones) return false;
+    try {
+      const obs = typeof pago.observaciones === 'string' 
+        ? JSON.parse(pago.observaciones) 
+        : pago.observaciones;
+      return obs.detalle_id === detalle.id;
+    } catch {
+      return false;
+    }
+  }) || [];
+  
+  const totalPagadoServicio = pagosDelServicio.reduce((sum: number, p: any) => sum + Number(p.monto), 0);
+  const saldoPendiente = precioServicio - totalPagadoServicio;
+  
+  console.log(`💰 [${detalle.servicio?.nombre}] Precio: ${precioServicio}, Pagado: ${totalPagadoServicio}, Saldo: ${saldoPendiente}`);
+  
+  return Math.max(0, saldoPendiente);
 }
 
-/**
- * Abre modal para pagar un servicio específico
- */
+// orden-detalle.component.ts - MODIFICAR pagarServicio() con mejor UI
+
 pagarServicio(detalle: any, index: number) {
   const montoMaximo = this.getDeudaPorServicio(detalle);
   const cliente = this.getClienteServicio(detalle);
@@ -773,32 +796,39 @@ pagarServicio(detalle: any, index: number) {
   }
 
   Swal.fire({
-    title: `Pagar Servicio: ${servicioNombre}`,
+    title: `💳 Pagar Servicio: ${servicioNombre}`,
     html: `
-      <div style="text-align: left; margin-bottom: 16px;">
-        <p><strong>Cliente:</strong> ${cliente}</p>
-        <p><strong>Servicio:</strong> ${servicioNombre}</p>
-        <p><strong>Precio:</strong> ${this.monedaPipe.transform(detalle.precio_unitario)}</p>
-        <p><strong>Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}</p>
+      <div style="text-align: left; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
+        <p style="margin: 4px 0;"><strong>👤 Cliente:</strong> ${cliente}</p>
+        <p style="margin: 4px 0;"><strong>💼 Servicio:</strong> ${servicioNombre}</p>
+        <p style="margin: 4px 0;"><strong>💰 Precio:</strong> ${this.monedaPipe.transform(detalle.precio_unitario)}</p>
+        <p style="margin: 4px 0; color: ${montoMaximo > 0 ? '#f43f5e' : '#10b981'}; font-weight: 700;">
+          <strong>💳 Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}
+        </p>
+        ${this.tieneClienteUnico() ? `
+          <p style="margin: 4px 0; font-size: 0.8rem; color: #64748b;">
+            <i class="fas fa-info-circle"></i> El pago se distribuirá proporcionalmente entre todos los servicios
+          </p>
+        ` : ''}
       </div>
       <input type="number" id="monto" class="swal2-input" 
              placeholder="Monto (S/)" step="0.01" min="0.01" 
              max="${montoMaximo}" value="${montoMaximo.toFixed(2)}">
       <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
-        <option value="efectivo">Efectivo</option>
-        <option value="tarjeta">Tarjeta</option>
-        <option value="transferencia">Transferencia</option>
-        <option value="yape">Yape</option>
-        <option value="plin">Plin</option>
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="transferencia">🏦 Transferencia</option>
+        <option value="yape">📱 Yape</option>
+        <option value="plin">📱 Plin</option>
       </select>
       <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
       <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
-        <i class="fas fa-info-circle"></i> Este pago se registrará para el servicio "${servicioNombre}"
+        <i class="fas fa-info-circle"></i> Este pago se registrará para el servicio "<strong>${servicioNombre}</strong>"
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: 'Registrar Pago',
-    cancelButtonText: 'Cancelar',
+    confirmButtonText: '✅ Registrar Pago',
+    cancelButtonText: '❌ Cancelar',
     preConfirm: () => {
       const monto = (document.getElementById('monto') as HTMLInputElement).value;
       const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
@@ -832,15 +862,10 @@ pagarServicio(detalle: any, index: number) {
     }
   }).then((result) => {
     if (result.isConfirmed) {
-      // Registrar el pago con referencia al servicio
       this.registrarPagoConDetalle(result.value);
     }
   });
 }
-
-// orden-detalle.component.ts - MODIFICAR registrarPagoConDetalle
-
-// orden-detalle.component.ts - MODIFICAR registrarPagoConDetalle
 
 /**
  * Registra un pago asociado a un detalle específico
@@ -848,7 +873,6 @@ pagarServicio(detalle: any, index: number) {
 registrarPagoConDetalle(data: any) {
   const ordenId = this.orden.id;
   
-  // ✅ Crear referencia más descriptiva y amigable
   const referencia = `Pago para ${data.servicioNombre}`;
   
   console.log('📝 [DEBUG] Registrando pago para servicio:', {
@@ -867,7 +891,6 @@ registrarPagoConDetalle(data: any) {
       monto: data.monto,
       metodo_pago: data.metodo_pago,
       referencia: referencia,
-      // ✅ Guardar información del servicio en observaciones (SOLO para backend)
       observaciones: JSON.stringify({
         detalle_id: data.detalleId,
         servicio: data.servicioNombre,
@@ -893,23 +916,15 @@ registrarPagoConDetalle(data: any) {
 }
 // orden-detalle.component.ts - AGREGAR ESTE MÉTODO
 
+// orden-detalle.component.ts - MODIFICAR mostrarBotonAgregarPago()
+
 /**
  * Determina si debe mostrarse el botón de "Agregar Pago" general
- * Solo se muestra cuando la orden es para un solo cliente
+ * ✅ AHORA SE MUESTRA SIEMPRE QUE HAYA SALDO
  */
 mostrarBotonAgregarPago(): boolean {
-  // Si la orden tiene cliente_nombre global (cliente único)
-  if (this.orden.cliente_nombre) {
-    return this.saldo > 0;
-  }
-  
-  // Si todos los detalles tienen el mismo cliente (cliente único)
-  if (this.tieneClienteUnico()) {
-    return this.saldo > 0;
-  }
-  
-  // Si tiene clientes diferentes, NO mostrar el botón general
-  return false;
+  // ✅ Siempre mostrar si hay saldo > 0
+  return this.saldo > 0;
 }
 
 }

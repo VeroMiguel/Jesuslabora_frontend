@@ -773,3 +773,57 @@
 .btn-export-doctor:hover {
   background: #059669;
 }
+/* doctores-reporte.component.css - AGREGAR ESTILOS PARA NUEVOS FILTROS */
+
+/* Ajustar grid de filtros para 4 columnas */
+.filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  align-items: flex-end;
+}
+
+/* Estilo para input type="month" */
+input[type="month"] {
+  padding: 10px 12px;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 10px;
+  background: var(--in, #f8fafc);
+  color: var(--txt, #0f172a);
+  font-size: 0.9rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+input[type="month"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] input[type="month"] {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filtros-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .filtro-actions {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtros-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filtro-actions {
+    grid-column: span 1;
+  }
+}
