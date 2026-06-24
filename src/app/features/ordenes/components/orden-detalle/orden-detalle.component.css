@@ -1269,3 +1269,211 @@
   align-items: center;
   gap: 4px;
 }
+/* orden-detalle.component.css - AGREGAR AL FINAL */
+
+/* Servicios lista mejorada */
+.servicios-lista {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.servicio-detalle-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  background: var(--in, #f8fafc);
+  border-radius: 12px;
+  border: 1px solid var(--bor, #e2e8f0);
+  transition: all 0.2s;
+}
+
+.servicio-detalle-item:hover {
+  background: var(--surf, #ffffff);
+  border-color: #6366f1;
+}
+
+.servicio-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.servicio-nombre-detalle {
+  font-weight: 600;
+  color: var(--txt, #0f172a);
+  font-size: 0.9rem;
+}
+
+.servicio-cantidad {
+  color: var(--mut, #64748b);
+  font-size: 0.8rem;
+}
+
+.servicio-precio {
+  color: #10b981;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.servicio-cliente-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.servicio-cliente {
+  font-size: 0.75rem;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.servicio-detalle {
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  background: var(--in, #f1f5f9);
+  padding: 2px 8px;
+  border-radius: 8px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-pagar-servicio {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-pagar-servicio:hover {
+  background: #059669;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-pagar-servicio:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pagar-servicio i {
+  font-size: 0.7rem;
+}
+
+.servicio-imagen-mini {
+  flex-shrink: 0;
+}
+
+.servicio-thumbnail {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--bor, #e2e8f0);
+  transition: transform 0.2s;
+}
+
+.servicio-thumbnail:hover {
+  transform: scale(1.1);
+}
+
+/* Pago referencias mejoradas */
+.pago-referencia {
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  background: var(--in, #f1f5f9);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pago-servicio {
+  font-size: 0.7rem;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-add-pago {
+  background: #6366f1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.btn-add-pago:hover:not(:disabled) {
+  background: #4f46e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.btn-add-pago:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .servicio-detalle-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  
+  .servicio-info {
+    flex-wrap: wrap;
+  }
+  
+  .servicio-cliente-info {
+    flex-wrap: wrap;
+  }
+  
+  .btn-pagar-servicio {
+    align-self: flex-start;
+    padding: 4px 14px;
+    font-size: 0.7rem;
+  }
+  
+  .servicio-detalle {
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+  }
+}

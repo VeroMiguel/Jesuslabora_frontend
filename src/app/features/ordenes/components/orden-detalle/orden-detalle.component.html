@@ -11,106 +11,103 @@
   </div>
 
   <div *ngIf="!cargando && orden" class="detalle-content">
-  <div class="info-card glass">
-  <div class="card-header">
-    <div class="doctor-info">
-      <img [src]="orden.doctor?.logo_url | imagen:'assets/images/default-doctor.png'" 
-           [alt]="orden.doctor?.nombre"
-           class="doctor-logo">
-      <div>
-        <h2>{{ orden.doctor?.nombre }}</h2>
-   <!-- orden-detalle.component.html - MODIFICAR LA SECCIÓN DE SERVICIOS -->
-
-<!-- orden-detalle.component.html - AGREGAR OPCIÓN DE PAGO POR SERVICIO -->
-
-<div class="servicios-lista">
-  <div *ngFor="let detalle of orden.detalles; let i = index" class="servicio-detalle-item">
-    <div class="servicio-info">
-      <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
-      <span class="servicio-cantidad">x{{ detalle.cantidad }}</span>
-      <span class="servicio-precio">{{ detalle.precio_unitario | moneda }}</span>
-    </div>
-    
-    <!-- ✅ Mostrar cliente del servicio -->
-    <div class="servicio-cliente-info">
-      <span class="servicio-cliente">
-        <i class="fas fa-user"></i> {{ getClienteServicio(detalle) }}
-      </span>
-      <span *ngIf="detalle.detalle_cliente" class="servicio-detalle">
-        <i class="fas fa-comment"></i> {{ detalle.detalle_cliente }}
-      </span>
-    </div>
-    
-    <!-- ✅ Botón de pago por servicio (SIEMPRE visible si el saldo del servicio > 0) -->
-    <button *ngIf="getDeudaPorServicio(detalle) > 0" 
-            class="btn-pagar-servicio"
-            (click)="pagarServicio(detalle, i)"
-            title="Pagar este servicio">
-      <i class="fas fa-money-bill-wave"></i> Pagar
-    </button>
-    
-    <!-- ✅ Mostrar imagen del servicio si existe -->
-    <div class="servicio-imagen-mini" *ngIf="detalle.imagen_referencia_url">
-      <img 
-        [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-image.png'" 
-        (error)="onImageError($event)"
-        (click)="verImagenServicio(detalle.imagen_referencia_url)"
-        class="servicio-thumbnail"
-        title="Ver imagen de referencia"
-      >
-    </div>
-  </div>
-</div>
+    <div class="info-card glass">
+      <div class="card-header">
+        <div class="doctor-info">
+          <img [src]="orden.doctor?.logo_url | imagen:'assets/images/default-doctor.png'" 
+               [alt]="orden.doctor?.nombre"
+               class="doctor-logo">
+          <div>
+            <h2>{{ orden.doctor?.nombre }}</h2>
+            
+            <!-- ✅ SECCIÓN DE SERVICIOS CON BOTÓN DE PAGO CONDICIONAL -->
+            <div class="servicios-lista">
+              <div *ngFor="let detalle of orden.detalles; let i = index" class="servicio-detalle-item">
+                <div class="servicio-info">
+                  <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
+                  <span class="servicio-cantidad">x{{ detalle.cantidad }}</span>
+                  <span class="servicio-precio">{{ detalle.precio_unitario | moneda }}</span>
+                </div>
+                
+                <!-- Cliente del servicio -->
+                <div class="servicio-cliente-info">
+                  <span class="servicio-cliente">
+                    <i class="fas fa-user"></i> {{ getClienteServicio(detalle) }}
+                  </span>
+                  <span *ngIf="detalle.detalle_cliente" class="servicio-detalle">
+                    <i class="fas fa-comment"></i> {{ detalle.detalle_cliente }}
+                  </span>
+                </div>
+                
+                <!-- ✅ BOTÓN DE PAGO POR SERVICIO (solo si hay deuda) -->
+                <button *ngIf="mostrarBotonPagarServicio(detalle)" 
+                        class="btn-pagar-servicio"
+                        (click)="pagarServicio(detalle, i)"
+                        title="Pagar este servicio">
+                  <i class="fas fa-money-bill-wave"></i> Pagar
+                </button>
+                
+                <!-- Imagen del servicio -->
+                <div class="servicio-imagen-mini" *ngIf="detalle.imagen_referencia_url">
+                  <img 
+                    [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-image.png'" 
+                    (error)="onImageError($event)"
+                    (click)="verImagenServicio(detalle.imagen_referencia_url)"
+                    class="servicio-thumbnail"
+                    title="Ver imagen de referencia">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="estado" [ngClass]="'estado-' + orden.estado">
+          {{ orden.estado | titlecase }}
+        </span>
       </div>
-    </div>
-    <span class="estado" [ngClass]="'estado-' + orden.estado">
-      {{ orden.estado | titlecase }}
-    </span>
-  </div>
 
-      <!-- Sección de imagen de referencia de la ORDEN -->
+      <!-- Input oculto para seleccionar archivo -->
+      <input 
+        type="file" 
+        #fileInput 
+        style="display: none" 
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif"
+        (change)="onImagenSeleccionada($event)">
 
-      <!-- Input oculto para seleccionar archivo - Actualizar accept -->
-<input 
-    type="file" 
-    #fileInput 
-    style="display: none" 
-    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif"
-    (change)="onImagenSeleccionada($event)">
+      <!-- Información de la orden -->
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Orden #</span>
+          <span class="value">{{ orden.id_externo }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Fecha Registro</span>
+          <span class="value fecha-registro">
+            <span class="fecha">{{ orden.fecha_registro | fecha:'dd/MM/yyyy' }}</span>
+            <span class="hora-registro">{{ orden.fecha_registro | fecha:'h:mm a' }}</span>
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="label">Prioridad</span>
+          <span class="value" [ngClass]="'prioridad-' + orden.prioridad">
+            {{ orden.prioridad | titlecase }}
+          </span>
+        </div>
+      </div>
 
- <!-- En orden-detalle.component.html, modificar la sección de información -->
-<div class="info-grid">
-  <div class="info-item">
-    <span class="label">Orden #</span>
-    <span class="value">{{ orden.id_externo }}</span>
-  </div>
-  <div class="info-item">
-    <span class="label">Fecha Registro</span>
-    <span class="value fecha-registro">
-      <span class="fecha">{{ orden.fecha_registro | fecha:'dd/MM/yyyy' }}</span>
-      <span class="hora-registro">{{ orden.fecha_registro | fecha:'h:mm a' }}</span>
-    </span>
-  </div>
-  <div class="info-item">
-    <span class="label">Prioridad</span>
-    <span class="value" [ngClass]="'prioridad-' + orden.prioridad">
-      {{ orden.prioridad | titlecase }}
-    </span>
-  </div>
-</div>
+      <!-- Fechas límite por servicio -->
+      <div class="fechas-limite-section" *ngIf="orden.detalles && orden.detalles.length > 0">
+        <h3>Fechas Límite por Servicio</h3>
+        <div class="fechas-limite-list">
+          <div *ngFor="let detalle of orden.detalles" class="fecha-limite-item">
+            <span class="servicio-nombre">{{ detalle.servicio?.nombre }}</span>
+            <span class="fecha-limite-valor" [ngClass]="{'vencido': isDetalleVencido(detalle)}">
+              {{ detalle.fecha_limite | fecha }} {{ detalle.hora_limite | hora }}
+            </span>
+          </div>
+        </div>
+      </div>
 
-<!-- ✅ Agregar sección de fechas límite por servicio -->
-<div class="fechas-limite-section" *ngIf="orden.detalles && orden.detalles.length > 0">
-  <h3>Fechas Límite por Servicio</h3>
-  <div class="fechas-limite-list">
-    <div *ngFor="let detalle of orden.detalles" class="fecha-limite-item">
-      <span class="servicio-nombre">{{ detalle.servicio?.nombre }}</span>
-      <span class="fecha-limite-valor" [ngClass]="{'vencido': isDetalleVencido(detalle)}">
-        {{ detalle.fecha_limite | fecha }} {{ detalle.hora_limite | hora }}
-      </span>
-    </div>
-  </div>
-</div>
+      <!-- Información de Pagos -->
       <div class="montos-section">
         <h3>Información de Pagos</h3>
         <div class="montos-grid">
@@ -128,87 +125,88 @@
           </div>
         </div>
       </div>
-<!-- orden-detalle.component.html - VERSIÓN MEJORADA CON REFERENCIA AMIGABLE -->
 
-<div class="pagos-section">
-  <h3>Historial de Pagos</h3>
-  
-  <button *ngIf="mostrarBotonAgregarPago()" 
-          class="btn-add-pago" 
-          (click)="agregarPago()" 
-          [disabled]="saldo === 0">
-    <i class="fas fa-plus"></i> Agregar Pago
-  </button>
+      <!-- Historial de Pagos -->
+      <div class="pagos-section">
+        <h3>Historial de Pagos</h3>
+        
+        <!-- ✅ Botón "Agregar Pago" SOLO para clientes diferentes -->
+        <button *ngIf="mostrarBotonAgregarPago()" 
+                class="btn-add-pago" 
+                (click)="agregarPago()" 
+                [disabled]="saldo === 0">
+          <i class="fas fa-plus"></i> Agregar Pago
+        </button>
 
-  <div *ngIf="orden.pagos?.length === 0" class="no-pagos">
-    No hay pagos registrados
-  </div>
+        <div *ngIf="orden.pagos?.length === 0" class="no-pagos">
+          No hay pagos registrados
+        </div>
 
-  <div *ngFor="let pago of orden.pagos" class="pago-item">
-    <div class="pago-info">
-      <span class="pago-fecha">{{ pago.creado_en | fecha:'dd/MM/yyyy h:mm a' }}</span>
-      <span class="pago-monto">{{ pago.monto | moneda }}</span>
-      <span class="pago-metodo">{{ pago.metodo_pago | titlecase }}</span>
-      
-      <!-- ✅ Mostrar referencia de forma amigable -->
-      <span *ngIf="pago.referencia" class="pago-referencia">
-        <i class="fas fa-tag"></i> {{ pago.referencia }}
-      </span>
-      
-      <!-- ✅ Si la referencia contiene "Pago para", extraer solo el nombre del servicio -->
-      <span *ngIf="pago.referencia && pago.referencia.startsWith('Pago para ')" 
-            class="pago-servicio">
-        <i class="fas fa-concierge-bell"></i> 
-        {{ pago.referencia.replace('Pago para ', '') }}
-      </span>
-    </div>
-    <div class="pago-actions">
-      <button class="btn-edit-pago" (click)="editarPago(pago)" title="Editar pago">
-        <i class="fas fa-pen"></i>
-      </button>
-      <button class="btn-delete" (click)="eliminarPago(pago.id)" title="Eliminar pago">
-        <i class="fas fa-trash"></i>
-      </button>
-    </div>
-  </div>
-</div>
-
-     <!-- Reemplaza la sección de Información del Cliente con esta versión mejorada -->
-<div *ngIf="orden.cliente_nombre" class="cliente-section">
-  <div class="cliente-header">
-    <h3><i class="fas fa-user"></i> Información del Cliente</h3>
-    <button class="btn-edit-cliente" (click)="editarDetalleCliente()" title="Editar detalle">
-      <i class="fas fa-edit"></i> Editar
-    </button>
-  </div>
-  <div class="cliente-info">
-    <div class="cliente-nombre">
-      <strong>Nombre:</strong> {{ orden.cliente_nombre }}
-    </div>
-    <div *ngIf="orden.detalle_cliente" class="cliente-detalle">
-      <strong>Detalle del Caso:</strong>
-      <div class="detalle-contenido">
-        {{ orden.detalle_cliente }}
+        <div *ngFor="let pago of orden.pagos" class="pago-item">
+          <div class="pago-info">
+            <span class="pago-fecha">{{ pago.creado_en | fecha:'dd/MM/yyyy h:mm a' }}</span>
+            <span class="pago-monto">{{ pago.monto | moneda }}</span>
+            <span class="pago-metodo">{{ pago.metodo_pago | titlecase }}</span>
+            
+            <!-- Referencia del pago -->
+            <span *ngIf="pago.referencia" class="pago-referencia">
+              <i class="fas fa-tag"></i> {{ pago.referencia }}
+            </span>
+            
+            <!-- Servicio asociado -->
+            <span *ngIf="pago.referencia && pago.referencia.startsWith('Pago para ')" 
+                  class="pago-servicio">
+              <i class="fas fa-concierge-bell"></i> 
+              {{ pago.referencia.replace('Pago para ', '') }}
+            </span>
+          </div>
+          <div class="pago-actions">
+            <button class="btn-edit-pago" (click)="editarPago(pago)" title="Editar pago">
+              <i class="fas fa-pen"></i>
+            </button>
+            <button class="btn-delete" (click)="eliminarPago(pago.id)" title="Eliminar pago">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
-    <div *ngIf="!orden.detalle_cliente" class="cliente-detalle vacio">
-      <i class="fas fa-info-circle"></i> Sin detalles adicionales
-    </div>
-  </div>
-</div>
 
-     <!-- En orden-detalle.component.html -->
-<div class="acciones">
-  <button class="btn-whatsapp" (click)="enviarWhatsApp()">
-    <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
-  </button>
-  <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa">
-    <i class="fas fa-eye"></i> Vista Previa
-  </button>
-  <button class="btn-edit" [routerLink]="['/ordenes/editar', orden.id]">
-    <i class="fas fa-pen-to-square"></i> Editar
-  </button>
-</div>
+      <!-- Información del Cliente -->
+      <div *ngIf="orden.cliente_nombre" class="cliente-section">
+        <div class="cliente-header">
+          <h3><i class="fas fa-user"></i> Información del Cliente</h3>
+          <button class="btn-edit-cliente" (click)="editarDetalleCliente()" title="Editar detalle">
+            <i class="fas fa-edit"></i> Editar
+          </button>
+        </div>
+        <div class="cliente-info">
+          <div class="cliente-nombre">
+            <strong>Nombre:</strong> {{ orden.cliente_nombre }}
+          </div>
+          <div *ngIf="orden.detalle_cliente" class="cliente-detalle">
+            <strong>Detalle del Caso:</strong>
+            <div class="detalle-contenido">
+              {{ orden.detalle_cliente }}
+            </div>
+          </div>
+          <div *ngIf="!orden.detalle_cliente" class="cliente-detalle vacio">
+            <i class="fas fa-info-circle"></i> Sin detalles adicionales
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="acciones">
+        <button class="btn-whatsapp" (click)="enviarWhatsApp()">
+          <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
+        </button>
+        <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa">
+          <i class="fas fa-eye"></i> Vista Previa
+        </button>
+        <button class="btn-edit" [routerLink]="['/ordenes/editar', orden.id]">
+          <i class="fas fa-pen-to-square"></i> Editar
+        </button>
+      </div>
     </div>
   </div>
 </div>

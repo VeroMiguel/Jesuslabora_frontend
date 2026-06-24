@@ -1,4 +1,4 @@
-// calendario-filtro.component.ts - VERSIÓN CORREGIDA
+// calendario-filtro.component.ts - VERSIÓN COMPLETA CORREGIDA
 
 import { Component, OnInit, OnDestroy, Output, EventEmitter, Input, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -34,12 +34,12 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   cargando: boolean = false;
   calendarApi: any = null;
   
-  // ✅ NUEVO: Almacenar fecha/hora actual del servidor
+  // Almacenar fecha/hora actual del servidor
   private fechaHoraActual: Date = new Date();
   
   private subscriptions: Subscription[] = [];
   
-  // ✅ CALENDAR OPTIONS CORREGIDO PARA FULLCALENDAR V6
+  // CALENDAR OPTIONS CORREGIDO PARA FULLCALENDAR V6
   calendarOptions: any = {
     plugins: [dayGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
@@ -65,7 +65,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     loading: this.onLoading.bind(this)
   };
 
-  // ✅ Propiedades para el modal
+  // Propiedades para el modal
   modalVisible: boolean = false;
   modalFecha: string = '';
   modalEventos: any[] = [];
@@ -80,7 +80,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   ) {}
   
   ngOnInit() {
-    // ✅ Obtener fecha/hora del servidor
+    // Obtener fecha/hora del servidor
     this.obtenerFechaHoraServidor();
     
     if (this.doctores.length === 0) {
@@ -88,7 +88,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
   
-  // ✅ NUEVO: Método para obtener fecha/hora del servidor
+  // Método para obtener fecha/hora del servidor
   obtenerFechaHoraServidor() {
     this.subscriptions.push(
       this.ordenService.getFechaHoraServidor().subscribe({
@@ -113,7 +113,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
 
-  // ✅ COMPARADOR PARA NGModel
+  // COMPARADOR PARA NGModel
   compararDoctores(d1: any, d2: any): boolean {
     return d1 && d2 && d1.id === d2.id;
   }
@@ -136,7 +136,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     );
   }
 
-  // ✅ MODIFICAR: cargarEventos() usando this.fechaHoraActual
+  // MÉTODO CORREGIDO - cargarEventos()
   cargarEventos(info: any, successCallback: any, failureCallback: any) {
     const fechaInicio = info.startStr.split('T')[0];
     const fechaFin = info.endStr.split('T')[0];
@@ -164,7 +164,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
           
           const eventos: any[] = [];
           
-          // ✅ Usar this.fechaHoraActual (obtenida del servidor)
+          // Usar this.fechaHoraActual (obtenida del servidor)
           const ahora = this.fechaHoraActual || new Date();
           console.log('🕐 Fecha actual para colores:', ahora.toLocaleString('es-PE'));
           
@@ -181,11 +181,18 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
                 
                 if (!fechaEvento) return;
                 
-                let color = '#6366f1'; // Morado por defecto (Normal)
+                // ================================================================
+                // ✅ LOGICA DE COLOR MODIFICADA AQUÍ
+                // ================================================================
+                let color = '#6366f1'; // Morado: Normal
                 
-                // ✅ Solo evaluar si es fecha límite
-                if (this.tipoFecha === 'limite' && detalle.fecha_limite) {
-                  // ✅ Crear fecha límite COMPLETA con hora
+                // 1️⃣ PRIORIDAD MÁXIMA: Si la ORDEN está terminada, es VERDE
+                if (orden.estado === 'terminado') {
+                  color = '#10b981'; // 🟢 Verde: Terminado / Pagado
+                }
+                // 2️⃣ Si NO está terminada, revisar si es fecha límite
+                else if (this.tipoFecha === 'limite' && detalle.fecha_limite) {
+                  // Construir la fecha límite COMPLETA
                   const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
                   let hora = 23, minutos = 59, segundos = 59;
                   
@@ -198,18 +205,18 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
                   
                   const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
                   
-                  // ✅ Comparar con la fecha actual (con hora)
+                  // Verificar si está VENCIDO
                   if (ahora.getTime() > fechaLimiteCompleta.getTime()) {
-                    color = '#f43f5e'; // 🔴 ROJO - Vencido
-                  } 
-                  // ✅ Próximo a vencer (menos de 48 horas)
-                  else if (fechaLimiteCompleta.getTime() - ahora.getTime() < 48 * 60 * 60 * 1000) {
-                    color = '#f59e0b'; // 🟡 AMARILLO - Próximo a vencer
+                    color = '#f43f5e'; // 🔴 Rojo: Vencido
                   }
-                  // Si no, queda MORADO (Normal)
-                } else if (orden.estado === 'terminado') {
-                  color = '#10b981'; // 🟢 VERDE - Terminado
+                  // Verificar si está PRÓXIMO A VENCER (menos de 48 horas)
+                  else if (fechaLimiteCompleta.getTime() - ahora.getTime() < 48 * 60 * 60 * 1000) {
+                    color = '#f59e0b'; // 🟡 Amarillo: Próximo a vencer
+                  }
+                  // Si no está vencido ni próximo, se queda MORADO (Normal)
                 }
+                // Si es fecha de registro, y no está terminada, se queda MORADO (Normal)
+                // ================================================================
                 
                 const doctorNombre = orden.doctor?.nombre?.substring(0, 20) || 'Sin doctor';
                 const servicioNombre = detalle.servicio?.nombre?.substring(0, 25) || 'Sin servicio';

@@ -36,11 +36,9 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   cargando = true;
   totalPagado = 0;
   saldo = 0;
-  // orden-detalle.component.ts - Agregar después de fechaServidorHoy
-
-fechaServidorHoy: string = '';
-fechaHoraServidor: string = '';  // NUEVO
-fechaHoraTimestamp: number = 0;   // NUEVO
+  fechaServidorHoy: string = '';
+  fechaHoraServidor: string = '';
+  fechaHoraTimestamp: number = 0;
   subiendoImagen = false;
   private subscriptions: Subscription[] = [];
   
@@ -56,31 +54,28 @@ fechaHoraTimestamp: number = 0;   // NUEVO
     private servicioService: ServicioService
   ) {}
 
-// orden-detalle.component.ts - Modificar ngOnInit
-
-ngOnInit() {
-  // Primero obtener la fecha y hora del servidor
-  this.subscriptions.push(
-    this.ordenService.getFechaHoraServidor().subscribe({
-      next: (fechaHoraRespuesta) => {
-        this.fechaServidorHoy = fechaHoraRespuesta.fecha;
-        this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
-        this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
-        console.log('📅 Detalle - Fecha/Hora servidor:', this.fechaHoraServidor);
-        this.cargarOrdenDesdeParams();
-      },
-      error: (error) => {
-        console.error('Error obteniendo fecha/hora del servidor:', error);
-        const ahora = new Date();
-        this.fechaServidorHoy = ahora.toISOString().split('T')[0];
-        this.fechaHoraServidor = ahora.toISOString();
-        this.fechaHoraTimestamp = ahora.getTime();
-        console.log('📅 Detalle - Usando fecha local:', this.fechaServidorHoy);
-        this.cargarOrdenDesdeParams();
-      }
-    })
-  );
-}
+  ngOnInit() {
+    this.subscriptions.push(
+      this.ordenService.getFechaHoraServidor().subscribe({
+        next: (fechaHoraRespuesta) => {
+          this.fechaServidorHoy = fechaHoraRespuesta.fecha;
+          this.fechaHoraServidor = fechaHoraRespuesta.fecha_hora;
+          this.fechaHoraTimestamp = fechaHoraRespuesta.timestamp;
+          console.log('📅 Detalle - Fecha/Hora servidor:', this.fechaHoraServidor);
+          this.cargarOrdenDesdeParams();
+        },
+        error: (error) => {
+          console.error('Error obteniendo fecha/hora del servidor:', error);
+          const ahora = new Date();
+          this.fechaServidorHoy = ahora.toISOString().split('T')[0];
+          this.fechaHoraServidor = ahora.toISOString();
+          this.fechaHoraTimestamp = ahora.getTime();
+          console.log('📅 Detalle - Usando fecha local:', this.fechaServidorHoy);
+          this.cargarOrdenDesdeParams();
+        }
+      })
+    );
+  }
 
   private cargarOrdenDesdeParams() {
     this.subscriptions.push(
@@ -110,48 +105,31 @@ ngOnInit() {
     );
   }
 
-// orden-detalle.component.ts - Reemplazar el método isVencida
-
-// orden-detalle.component.ts - Reemplazar isVencida
-
-isVencida(): boolean {
-  if (!this.orden?.fecha_limite || this.orden.estado === 'terminado') return false;
-  const saldo = this.saldo;
-  if (saldo <= 0) return false;
-  
-  // ✅ Usar timestamp del servidor
-  let ahora: Date;
-  if (this.fechaHoraTimestamp > 0) {
-    ahora = new Date(this.fechaHoraTimestamp);
-  } else {
-    ahora = new Date();
+  isVencida(): boolean {
+    if (!this.orden?.fecha_limite || this.orden.estado === 'terminado') return false;
+    const saldo = this.saldo;
+    if (saldo <= 0) return false;
+    
+    let ahora: Date;
+    if (this.fechaHoraTimestamp > 0) {
+      ahora = new Date(this.fechaHoraTimestamp);
+    } else {
+      ahora = new Date();
+    }
+    
+    const [yearL, monthL, dayL] = this.orden.fecha_limite.split('-').map(Number);
+    let hora = 23, minutos = 59, segundos = 59;
+    
+    if (this.orden.hora_limite) {
+      const horaParts = this.orden.hora_limite.split(':');
+      hora = parseInt(horaParts[0]);
+      minutos = parseInt(horaParts[1]);
+      segundos = 0;
+    }
+    
+    const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
+    return ahora.getTime() > fechaLimiteCompleta.getTime();
   }
-  
-  // ✅ Construir fecha límite completa
-  const [yearL, monthL, dayL] = this.orden.fecha_limite.split('-').map(Number);
-  let hora = 23, minutos = 59, segundos = 59;
-  
-  if (this.orden.hora_limite) {
-    const horaParts = this.orden.hora_limite.split(':');
-    hora = parseInt(horaParts[0]);
-    minutos = parseInt(horaParts[1]);
-    segundos = 0;
-  }
-  
-  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
-  
-  // ✅ Comparar timestamps
-  const esVencida = ahora.getTime() > fechaLimiteCompleta.getTime();
-  
-  console.log(`📅 Orden #${this.orden.id}:`, {
-    ahora: ahora.toLocaleString('es-PE'),
-    fechaLimite: fechaLimiteCompleta.toLocaleString('es-PE'),
-    diferenciaMinutos: Math.round((ahora.getTime() - fechaLimiteCompleta.getTime()) / 60000),
-    esVencida
-  });
-  
-  return esVencida;
-}
 
   calcularPagos() {
     if (this.orden?.pagos) {
@@ -160,127 +138,86 @@ isVencida(): boolean {
     }
   }
 
-  // Método para abrir selector de archivos (con soporte para cámara y galería)
   abrirSelectorImagen() {
     if (!this.orden?.servicio?.id) {
       Swal.fire('Error', 'No se pudo identificar el servicio', 'error');
       return;
     }
-    
-    // Usar el input oculto en lugar de crear uno dinámico
     if (this.fileInput) {
       this.fileInput.nativeElement.click();
     }
   }
 
-  // Método para cuando se selecciona un archivo
-// Actualiza onImagenSeleccionada para usar el nuevo método
-onImagenSeleccionada(event: Event) {
+  onImagenSeleccionada(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-        this.subirImagenReferencia(input.files[0]);
-        input.value = '';
+      this.subirImagenReferencia(input.files[0]);
+      input.value = '';
     }
-}
+  }
 
-  // Subir imagen del servicio
-// Reemplaza el método subirImagenReferencia con esta versión mejorada
-subirImagenReferencia(file: File) {
-    // Mostrar información del archivo para depuración
+  subirImagenReferencia(file: File) {
     console.log('📁 Archivo seleccionado para orden:', {
-        nombre: file.name,
-        tamaño: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-        tipo: file.type
+      nombre: file.name,
+      tamaño: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+      tipo: file.type
     });
     
-    // Validar tamaño - 15MB (15000 * 1024 = 15,728,640 bytes)
-    const MAX_SIZE = 15 * 1024 * 1024; // 15MB
+    const MAX_SIZE = 15 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Imagen muy grande',
-            text: `La imagen no puede superar los 15MB. Actualmente pesa ${(file.size / 1024 / 1024).toFixed(2)}MB. Por favor, comprime la imagen o usa una más pequeña.`,
-            confirmButtonColor: '#f43f5e'
-        });
-        return;
+      Swal.fire({
+        icon: 'error',
+        title: 'Imagen muy grande',
+        text: `La imagen no puede superar los 15MB. Actualmente pesa ${(file.size / 1024 / 1024).toFixed(2)}MB.`,
+        confirmButtonColor: '#f43f5e'
+      });
+      return;
     }
     
-    // Validar tipo - soporte para formatos comunes y HEIC/HEIF (iPhone)
-    const allowedTypes = [
-        'image/jpeg', 
-        'image/jpg', 
-        'image/png', 
-        'image/gif', 
-        'image/webp',
-        'image/avif',
-        'image/heic',
-        'image/heif'
-    ];
-    
-    // También validar por extensión
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
     const extension = file.name.split('.').pop()?.toLowerCase();
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif'];
     
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension || '')) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Formato no soportado',
-            text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, AVIF, HEIC',
-            confirmButtonColor: '#f43f5e'
-        });
-        return;
+      Swal.fire({
+        icon: 'error',
+        title: 'Formato no soportado',
+        text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, AVIF, HEIC',
+        confirmButtonColor: '#f43f5e'
+      });
+      return;
     }
 
     this.subiendoImagen = true;
-
     const formData = new FormData();
     formData.append('imagen', file);
 
     this.subscriptions.push(
-        this.ordenService.actualizarImagenReferencia(this.orden.id, formData).subscribe({
-            next: (response) => {
-                this.subiendoImagen = false;
-                this.orden.imagen_referencia_url = response.imagen_url;
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Imagen actualizada!',
-                    text: 'La imagen de referencia para esta orden se ha actualizado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            },
-            error: (error) => {
-                this.subiendoImagen = false;
-                console.error('❌ Error subiendo imagen:', error);
-                
-                // Mostrar mensaje de error más específico
-                let mensajeError = 'No se pudo subir la imagen.';
-                if (error.error && error.error.error) {
-                    mensajeError = error.error.error;
-                } else if (error.message) {
-                    mensajeError = error.message;
-                }
-                
-                // Si el error es sobre el tamaño de la imagen
-                if (mensajeError.toLowerCase().includes('tamaño') || 
-                    mensajeError.toLowerCase().includes('size') ||
-                    mensajeError.toLowerCase().includes('large')) {
-                    mensajeError = 'La imagen es demasiado grande. Máximo 15MB permitido.';
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: mensajeError,
-                    confirmButtonColor: '#f43f5e'
-                });
-            }
-        })
+      this.ordenService.actualizarImagenReferencia(this.orden.id, formData).subscribe({
+        next: (response) => {
+          this.subiendoImagen = false;
+          this.orden.imagen_referencia_url = response.imagen_url;
+          Swal.fire({
+            icon: 'success',
+            title: '¡Imagen actualizada!',
+            timer: 2000,
+            showConfirmButton: false
+          });
+        },
+        error: (error) => {
+          this.subiendoImagen = false;
+          console.error('❌ Error subiendo imagen:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo subir la imagen.',
+            confirmButtonColor: '#f43f5e'
+          });
+        }
+      })
     );
-}
+  }
 
-  // Métodos de acciones (mantener los existentes)
   enviarWhatsApp() {
     this.whatsAppService.enviarMensajePersonalizado({
       telefono: this.orden?.doctor?.telefono_whatsapp,
@@ -306,7 +243,6 @@ subirImagenReferencia(file: File) {
         Swal.fire({
           icon: 'success',
           title: '¡Descargado!',
-          text: 'El PDF se ha guardado correctamente',
           timer: 1500,
           showConfirmButton: false
         });
@@ -317,6 +253,206 @@ subirImagenReferencia(file: File) {
       });
   }
 
+  // ============================================================
+  // ✅ MÉTODOS DE PAGO - VERSIÓN MEJORADA
+  // ============================================================
+
+  /**
+   * Determina si debe mostrarse el botón de "Agregar Pago" general
+   * ✅ SOLO se muestra cuando:
+   * - La orden tiene clientes DIFERENTES por servicio
+   * - Hay saldo > 0
+   * - La orden NO está terminada
+   */
+  mostrarBotonAgregarPago(): boolean {
+    // ✅ Si la orden está terminada, NO mostrar
+    if (this.orden?.estado === 'terminado') return false;
+    
+    // ✅ Si no hay saldo, NO mostrar
+    if (this.saldo <= 0) return false;
+    
+    // ✅ Solo mostrar si la orden tiene clientes diferentes
+    // (para ese caso es necesario un pago global)
+    return this.tieneClientesDiferentes();
+  }
+
+  /**
+   * Determina si el botón "Pagar" de un servicio debe mostrarse
+   */
+  mostrarBotonPagarServicio(detalle: any): boolean {
+    // ✅ Si la orden está terminada, NO mostrar
+    if (this.orden?.estado === 'terminado') return false;
+    
+    // ✅ Si el servicio ya está pagado, NO mostrar
+    const deuda = this.getDeudaPorServicio(detalle);
+    if (deuda <= 0) return false;
+    
+    // ✅ Mostrar si hay deuda
+    return true;
+  }
+
+  /**
+   * Obtiene la deuda por servicio (con el saldo correcto)
+   */
+  getDeudaPorServicio(detalle: any): number {
+    if (!detalle) return 0;
+    
+    // ✅ Si la orden está terminada, la deuda es 0
+    if (this.orden?.estado === 'terminado') return 0;
+    
+    const precioServicio = parseFloat(detalle.precio_unitario) || 0;
+    
+    // ✅ Obtener pagos específicos de este servicio
+    const pagosDelServicio = this.orden.pagos?.filter((pago: any) => {
+      if (pago.observaciones) {
+        try {
+          const obs = typeof pago.observaciones === 'string' 
+            ? JSON.parse(pago.observaciones) 
+            : pago.observaciones;
+          if (obs.detalle_id === detalle.id) {
+            return true;
+          }
+        } catch {
+          // Ignorar
+        }
+      }
+      if (pago.referencia && pago.referencia.includes(detalle.servicio?.nombre)) {
+        return true;
+      }
+      return false;
+    }) || [];
+    
+    const totalPagadoServicio = pagosDelServicio.reduce((sum: number, p: any) => sum + Number(p.monto), 0);
+    const saldoPendiente = precioServicio - totalPagadoServicio;
+    
+    console.log(`💰 [${detalle.servicio?.nombre}] Precio: ${precioServicio}, Pagado: ${totalPagadoServicio}, Saldo: ${saldoPendiente}`);
+    
+    return Math.max(0, saldoPendiente);
+  }
+
+  /**
+   * Verifica si la orden tiene clientes diferentes por servicio
+   */
+  tieneClientesDiferentes(): boolean {
+    if (!this.orden?.detalles || this.orden.detalles.length <= 1) return false;
+    
+    const clientes: string[] = this.orden.detalles
+      .map((d: any) => d.cliente_nombre)
+      .filter((c: string) => c && c.trim() !== '');
+    
+    if (clientes.length === 0) return false;
+    const primerCliente = clientes[0];
+    return clientes.some((c: string) => c !== primerCliente);
+  }
+
+  /**
+   * Verifica si la orden es para un solo cliente
+   */
+  tieneClienteUnico(): boolean {
+    if (!this.orden?.detalles || this.orden.detalles.length === 0) return false;
+    
+    if (this.orden.cliente_nombre) return true;
+    
+    const clientes: string[] = this.orden.detalles
+      .map((d: any) => d.cliente_nombre)
+      .filter((c: string) => c && c.trim() !== '');
+    
+    if (clientes.length === 0) return false;
+    const primerCliente = clientes[0];
+    return clientes.every((c: string) => c === primerCliente);
+  }
+
+  /**
+   * Obtiene el nombre del cliente para un servicio
+   */
+  getClienteServicio(detalle: any): string {
+    if (this.orden.cliente_nombre) return this.orden.cliente_nombre;
+    return detalle.cliente_nombre || 'Sin cliente';
+  }
+
+  /**
+   * ✅ PAGO INDIVIDUAL POR SERVICIO
+   */
+  pagarServicio(detalle: any, index: number) {
+    const montoMaximo = this.getDeudaPorServicio(detalle);
+    const cliente = this.getClienteServicio(detalle);
+    const servicioNombre = detalle.servicio?.nombre || 'Servicio';
+    
+    if (montoMaximo <= 0) {
+      Swal.fire('Info', `El servicio "${servicioNombre}" ya está pagado`, 'info');
+      return;
+    }
+
+    Swal.fire({
+      title: `💳 Pagar Servicio: ${servicioNombre}`,
+      html: `
+        <div style="text-align: left; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
+          <p style="margin: 4px 0;"><strong>👤 Cliente:</strong> ${cliente}</p>
+          <p style="margin: 4px 0;"><strong>💼 Servicio:</strong> ${servicioNombre}</p>
+          <p style="margin: 4px 0;"><strong>💰 Precio:</strong> ${this.monedaPipe.transform(detalle.precio_unitario)}</p>
+          <p style="margin: 4px 0; color: ${montoMaximo > 0 ? '#f43f5e' : '#10b981'}; font-weight: 700;">
+            <strong>💳 Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}
+          </p>
+        </div>
+        <input type="number" id="monto" class="swal2-input" 
+               placeholder="Monto (S/)" step="0.01" min="0.01" 
+               max="${montoMaximo}" value="${montoMaximo.toFixed(2)}">
+        <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="tarjeta">💳 Tarjeta</option>
+          <option value="transferencia">🏦 Transferencia</option>
+          <option value="yape">📱 Yape</option>
+          <option value="plin">📱 Plin</option>
+        </select>
+        <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+          <i class="fas fa-info-circle"></i> Este pago se registrará para el servicio "<strong>${servicioNombre}</strong>"
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '✅ Registrar Pago',
+      cancelButtonText: '❌ Cancelar',
+      preConfirm: () => {
+        const monto = (document.getElementById('monto') as HTMLInputElement).value;
+        const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
+        const referencia = (document.getElementById('referencia') as HTMLInputElement).value;
+        
+        if (!monto || monto.trim() === '') {
+          Swal.showValidationMessage('Ingrese un monto');
+          return false;
+        }
+        
+        const montoNumerico = parseFloat(monto);
+        
+        if (isNaN(montoNumerico) || montoNumerico <= 0) {
+          Swal.showValidationMessage('Ingrese un monto válido mayor a 0');
+          return false;
+        }
+        
+        if (montoNumerico > montoMaximo) {
+          Swal.showValidationMessage(`El monto no puede exceder el saldo pendiente (${this.monedaPipe.transform(montoMaximo)})`);
+          return false;
+        }
+        
+        return { 
+          monto: montoNumerico, 
+          metodo_pago: metodo, 
+          referencia,
+          detalleId: detalle.id,
+          servicioNombre: servicioNombre,
+          cliente: cliente
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.registrarPagoConDetalle(result.value);
+      }
+    });
+  }
+
+  /**
+   * ✅ PAGO GLOBAL (SOLO PARA CLIENTES DIFERENTES)
+   */
   agregarPago() {
     const saldoActual = this.saldo;
     
@@ -325,27 +461,53 @@ subirImagenReferencia(file: File) {
       return;
     }
 
+    // ✅ Mostrar cómo se distribuirá el pago
+    const serviciosConDeuda = this.orden.detalles.filter((d: any) => {
+      return this.getDeudaPorServicio(d) > 0;
+    });
+
+    let distribucionPreview = '';
+    if (serviciosConDeuda.length > 1) {
+      const deudaTotal = serviciosConDeuda.reduce((sum: number, d: any) => {
+        return sum + this.getDeudaPorServicio(d);
+      }, 0);
+      
+      distribucionPreview = `<div style="margin-top: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; text-align: left;">
+        <p style="font-weight: 600; margin-bottom: 8px;">📊 Distribución del pago:</p>`;
+      
+      serviciosConDeuda.forEach((d: any) => {
+        const deuda = this.getDeudaPorServicio(d);
+        const proporcion = (deuda / deudaTotal) * 100;
+        distribucionPreview += `<p style="margin: 2px 0; font-size: 0.85rem;">
+          ${d.servicio?.nombre}: ${proporcion.toFixed(0)}% (${this.monedaPipe.transform(deuda)} pendiente)
+        </p>`;
+      });
+      
+      distribucionPreview += `</div>`;
+    }
+
     Swal.fire({
-      title: 'Registrar Pago',
+      title: '📝 Registrar Pago Global',
       html: `
         <input type="number" id="monto" class="swal2-input" 
                placeholder="Monto (S/)" step="0.01" min="0.01" 
                max="${saldoActual}" value="${saldoActual.toFixed(2)}">
         <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
-          <option value="efectivo">Efectivo</option>
-          <option value="tarjeta">Tarjeta</option>
-          <option value="transferencia">Transferencia</option>
-          <option value="yape">Yape</option>
-          <option value="plin">Plin</option>
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="tarjeta">💳 Tarjeta</option>
+          <option value="transferencia">🏦 Transferencia</option>
+          <option value="yape">📱 Yape</option>
+          <option value="plin">📱 Plin</option>
         </select>
         <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
         <div class="swal2-text" style="font-size:0.9rem; color:#64748b; margin-top:10px;">
-          Saldo pendiente: ${this.monedaPipe.transform(saldoActual)}
+          <strong>Saldo pendiente total:</strong> ${this.monedaPipe.transform(saldoActual)}
         </div>
+        ${distribucionPreview}
       `,
       showCancelButton: true,
-      confirmButtonText: 'Registrar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: '✅ Registrar',
+      cancelButtonText: '❌ Cancelar',
       preConfirm: () => {
         const monto = (document.getElementById('monto') as HTMLInputElement).value;
         const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
@@ -368,56 +530,128 @@ subirImagenReferencia(file: File) {
           return false;
         }
         
-        return { monto: montoNumerico, metodo_pago: metodo, referencia };
+        return { 
+          monto: montoNumerico, 
+          metodo_pago: metodo, 
+          referencia
+        };
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        // ✅ LOG: Verificar el orden_id antes de enviar
-        const ordenId = this.orden.id;
-        console.log('📝 [DEBUG] Enviando pago con orden_id:', ordenId, 'tipo:', typeof ordenId);
-        console.log('📝 [DEBUG] Datos del pago:', {
-          orden_id: ordenId,
-          monto: result.value.monto,
-          metodo_pago: result.value.metodo_pago,
-          referencia: result.value.referencia
-        });
+        this.registrarPagoGlobal(result.value);
+      }
+    });
+  }
+
+  /**
+   * ✅ Registra un pago global (se distribuye entre servicios con deuda)
+   */
+  registrarPagoGlobal(data: any) {
+    const serviciosConDeuda = this.orden.detalles.filter((d: any) => {
+      return this.getDeudaPorServicio(d) > 0;
+    });
+
+    if (serviciosConDeuda.length === 0) {
+      Swal.fire('Info', 'Todos los servicios ya están pagados', 'info');
+      return;
+    }
+
+    const deudaTotal = serviciosConDeuda.reduce((sum: number, d: any) => {
+      return sum + this.getDeudaPorServicio(d);
+    }, 0);
+
+    let pagosRegistrados = 0;
+
+    serviciosConDeuda.forEach((d: any) => {
+      const proporcion = (this.getDeudaPorServicio(d) / deudaTotal) * data.monto;
+      if (proporcion > 0) {
+        const montoRedondeado = Math.round(proporcion * 100) / 100;
+        const referencia = `Pago distribuido para ${d.servicio?.nombre}`;
         
         this.subscriptions.push(
           this.pagoService.registrarPago({
-            orden_id: Number(ordenId), // ✅ Asegurar que sea número
-            monto: result.value.monto,
-            metodo_pago: result.value.metodo_pago,
-            referencia: result.value.referencia
+            orden_id: Number(this.orden.id),
+            monto: montoRedondeado,
+            metodo_pago: data.metodo_pago,
+            referencia: referencia,
+            observaciones: JSON.stringify({
+              detalle_id: d.id,
+              servicio: d.servicio?.nombre,
+              cliente: this.getClienteServicio(d)
+            })
           }).subscribe({
-            next: (response) => {
-              console.log('✅ [DEBUG] Pago registrado exitosamente:', response);
-              Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: 'Pago registrado correctamente',
-                timer: 1500,
-                showConfirmButton: false
-              });
-              this.cargarOrden(this.orden.id);
+            next: () => {
+              pagosRegistrados++;
+              if (pagosRegistrados === serviciosConDeuda.length) {
+                Swal.fire({
+                  icon: 'success',
+                  title: '¡Pago registrado!',
+                  text: `Pago de ${this.monedaPipe.transform(data.monto)} registrado correctamente`,
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+                this.cargarOrden(this.orden.id);
+              }
             },
             error: (error) => {
-              console.error('❌ [DEBUG] Error registrando pago:', error);
-              console.error('❌ [DEBUG] Detalles del error:', {
-                status: error.status,
-                message: error.message,
-                error: error.error
-              });
-              if (error.error && error.error.error) {
-                Swal.fire('Error', error.error.error, 'error');
-              } else {
-                Swal.fire('Error', 'No se pudo registrar el pago', 'error');
-              }
+              console.error('❌ Error registrando pago:', error);
             }
           })
         );
       }
     });
   }
+
+  /**
+   * ✅ Registra un pago asociado a un detalle específico
+   */
+  registrarPagoConDetalle(data: any) {
+    const ordenId = this.orden.id;
+    const referencia = data.referencia || `Pago para ${data.servicioNombre}`;
+    
+    console.log('📝 [DEBUG] Registrando pago para servicio:', {
+      orden_id: ordenId,
+      detalle_id: data.detalleId,
+      servicio: data.servicioNombre,
+      cliente: data.cliente,
+      monto: data.monto,
+      metodo: data.metodo_pago,
+      referencia: referencia
+    });
+    
+    this.subscriptions.push(
+      this.pagoService.registrarPago({
+        orden_id: Number(ordenId),
+        monto: data.monto,
+        metodo_pago: data.metodo_pago,
+        referencia: referencia,
+        observaciones: JSON.stringify({
+          detalle_id: data.detalleId,
+          servicio: data.servicioNombre,
+          cliente: data.cliente
+        })
+      }).subscribe({
+        next: () => {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Pago registrado!',
+            text: `Pago de ${this.monedaPipe.transform(data.monto)} para "${data.servicioNombre}" registrado correctamente`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+          this.cargarOrden(this.orden.id);
+        },
+        error: (error) => {
+          console.error('❌ Error registrando pago:', error);
+          Swal.fire('Error', 'No se pudo registrar el pago', 'error');
+        }
+      })
+    );
+  }
+
+  // ============================================================
+  // OTROS MÉTODOS
+  // ============================================================
 
   editarPago(pago: any) {
     const saldoActual = Number(this.saldo) + Number(pago.monto);
@@ -429,11 +663,11 @@ subirImagenReferencia(file: File) {
                value="${pago.monto}" step="0.01" min="0.01" 
                max="${saldoActual}" placeholder="Monto (S/)">
         <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
-          <option value="efectivo" ${pago.metodo_pago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
-          <option value="tarjeta" ${pago.metodo_pago === 'tarjeta' ? 'selected' : ''}>Tarjeta</option>
-          <option value="transferencia" ${pago.metodo_pago === 'transferencia' ? 'selected' : ''}>Transferencia</option>
-          <option value="yape" ${pago.metodo_pago === 'yape' ? 'selected' : ''}>Yape</option>
-          <option value="plin" ${pago.metodo_pago === 'plin' ? 'selected' : ''}>Plin</option>
+          <option value="efectivo" ${pago.metodo_pago === 'efectivo' ? 'selected' : ''}>💵 Efectivo</option>
+          <option value="tarjeta" ${pago.metodo_pago === 'tarjeta' ? 'selected' : ''}>💳 Tarjeta</option>
+          <option value="transferencia" ${pago.metodo_pago === 'transferencia' ? 'selected' : ''}>🏦 Transferencia</option>
+          <option value="yape" ${pago.metodo_pago === 'yape' ? 'selected' : ''}>📱 Yape</option>
+          <option value="plin" ${pago.metodo_pago === 'plin' ? 'selected' : ''}>📱 Plin</option>
         </select>
         <input type="text" id="referencia" class="swal2-input" 
                value="${pago.referencia || ''}" placeholder="Referencia (opcional)">
@@ -526,6 +760,145 @@ subirImagenReferencia(file: File) {
     });
   }
 
+  editarDetalleCliente() {
+    Swal.fire({
+      title: 'Editar Detalle del Cliente',
+      html: `
+        <div style="text-align: left;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
+          <input id="cliente-nombre" class="swal2-input" 
+                 value="${this.orden.cliente_nombre || ''}" 
+                 placeholder="Nombre del paciente"
+                 style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
+          <textarea id="detalle-cliente" class="swal2-textarea" 
+                    rows="5" 
+                    placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${this.orden.detalle_cliente || ''}</textarea>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+            <i class="fas fa-info-circle"></i> Incluya información relevante
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const clienteNombre = (document.getElementById('cliente-nombre') as HTMLInputElement).value;
+        const detalleCliente = (document.getElementById('detalle-cliente') as HTMLTextAreaElement).value;
+        if (!clienteNombre.trim()) {
+          Swal.showValidationMessage('El nombre del cliente es requerido');
+          return false;
+        }
+        return { cliente_nombre: clienteNombre, detalle_cliente: detalleCliente };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.subscriptions.push(
+          this.ordenService.actualizarOrden(this.orden.id, {
+            cliente_nombre: result.value.cliente_nombre,
+            detalle_cliente: result.value.detalle_cliente
+          }).subscribe({
+            next: () => {
+              this.orden.cliente_nombre = result.value.cliente_nombre;
+              this.orden.detalle_cliente = result.value.detalle_cliente;
+              Swal.fire({
+                icon: 'success',
+                title: 'Actualizado',
+                timer: 1500,
+                showConfirmButton: false
+              });
+            },
+            error: (error) => {
+              console.error('Error actualizando cliente:', error);
+              Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+            }
+          })
+        );
+      }
+    });
+  }
+
+  isDetalleVencido(detalle: any): boolean {
+    if (!detalle.fecha_limite) return false;
+    
+    let ahora: Date;
+    if (this.fechaHoraTimestamp > 0) {
+      ahora = new Date(this.fechaHoraTimestamp);
+    } else {
+      ahora = new Date();
+    }
+    
+    const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
+    let hora = 23, minutos = 59;
+    
+    if (detalle.hora_limite) {
+      const horaParts = detalle.hora_limite.split(':');
+      hora = parseInt(horaParts[0]);
+      minutos = parseInt(horaParts[1]);
+    }
+    
+    const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos);
+    return ahora.getTime() > fechaLimiteCompleta.getTime();
+  }
+
+  async verImagenServicio(url: string) {
+    let imagenUrl = url;
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      const baseUrl = environment.apiUrl.replace('/api', '');
+      imagenUrl = `${baseUrl}${url}`;
+    }
+    
+    console.log('🔍 Mostrando imagen:', imagenUrl);
+    const img = new Image();
+    img.src = imagenUrl;
+    
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+    
+    const maxWidth = window.innerWidth * 0.8;
+    const maxHeight = window.innerHeight * 0.8;
+    let imageWidth = img.width;
+    let imageHeight = img.height;
+    
+    if (imageWidth > maxWidth || imageHeight > maxHeight) {
+      const ratio = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
+      imageWidth = imageWidth * ratio;
+      imageHeight = imageHeight * ratio;
+    }
+    
+    try {
+      await Swal.fire({
+        imageUrl: imagenUrl,
+        imageAlt: 'Imagen de referencia del servicio',
+        width: `${imageWidth + 40}px`,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        imageWidth: `${imageWidth}px`,
+        imageHeight: `${imageHeight}px`,
+        backdrop: true,
+        allowOutsideClick: true,
+        customClass: {
+          image: 'servicio-imagen-modal'
+        }
+      });
+    } catch (err) {
+      console.error('Error mostrando imagen:', err);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo cargar la imagen'
+      });
+    }
+  }
+
+  onImageError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/images/default-image.png';
+    console.warn('Error cargando imagen, usando default');
+  }
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => {
       if (sub && typeof sub.unsubscribe === 'function') {
@@ -534,397 +907,4 @@ subirImagenReferencia(file: File) {
     });
     console.log('🧹 OrdenDetalleComponent destruido');
   }
-// Agregar este método a OrdenDetalleComponent
-editarDetalleCliente() {
-    Swal.fire({
-        title: 'Editar Detalle del Cliente',
-        html: `
-            <div style="text-align: left;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
-                <input id="cliente-nombre" class="swal2-input" 
-                       value="${this.orden.cliente_nombre || ''}" 
-                       placeholder="Nombre del paciente"
-                       style="margin-bottom: 16px;">
-                
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
-                <textarea id="detalle-cliente" class="swal2-textarea" 
-                          rows="5" 
-                          placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${this.orden.detalle_cliente || ''}</textarea>
-                
-                <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
-                    <i class="fas fa-info-circle"></i> Incluya información relevante como:
-                    pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
-                </div>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Guardar cambios',
-        cancelButtonText: 'Cancelar',
-        preConfirm: () => {
-            const clienteNombre = (document.getElementById('cliente-nombre') as HTMLInputElement).value;
-            const detalleCliente = (document.getElementById('detalle-cliente') as HTMLTextAreaElement).value;
-            
-            if (!clienteNombre.trim()) {
-                Swal.showValidationMessage('El nombre del cliente es requerido');
-                return false;
-            }
-            
-            return { cliente_nombre: clienteNombre, detalle_cliente: detalleCliente };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            this.subscriptions.push(
-                this.ordenService.actualizarOrden(this.orden.id, {
-                    cliente_nombre: result.value.cliente_nombre,
-                    detalle_cliente: result.value.detalle_cliente
-                }).subscribe({
-                    next: () => {
-                        this.orden.cliente_nombre = result.value.cliente_nombre;
-                        this.orden.detalle_cliente = result.value.detalle_cliente;
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Actualizado',
-                            text: 'La información del cliente se ha actualizado correctamente',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    },
-                    error: (error) => {
-                        console.error('Error actualizando cliente:', error);
-                        Swal.fire('Error', 'No se pudo actualizar la información', 'error');
-                    }
-                })
-            );
-        }
-    });
-}
-
-// orden-detalle.component.ts - Agregar este método
-isDetalleVencido(detalle: any): boolean {
-  if (!detalle.fecha_limite) return false;
-  
-  let ahora: Date;
-  if (this.fechaHoraTimestamp > 0) {
-    ahora = new Date(this.fechaHoraTimestamp);
-  } else {
-    ahora = new Date();
-  }
-  
-  const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
-  let hora = 23, minutos = 59;
-  
-  if (detalle.hora_limite) {
-    const horaParts = detalle.hora_limite.split(':');
-    hora = parseInt(horaParts[0]);
-    minutos = parseInt(horaParts[1]);
-  }
-  
-  const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos);
-  return ahora.getTime() > fechaLimiteCompleta.getTime();
-}
-// orden-detalle.component.ts - AGREGAR ESTE MÉTODO
-
-// orden-detalle.component.ts - CORREGIR verImagenServicio
-
-async verImagenServicio(url: string) {
-  // ✅ Asegurar que la URL sea completa
-  let imagenUrl = url;
-  if (url && !url.startsWith('http') && !url.startsWith('data:')) {
-    const baseUrl = environment.apiUrl.replace('/api', '');
-    imagenUrl = `${baseUrl}${url}`;
-  }
-  
-  console.log('🔍 Mostrando imagen:', imagenUrl);
-  
-  // ✅ Crear un elemento de imagen temporal para obtener dimensiones
-  const img = new Image();
-  img.src = imagenUrl;
-  
-  await new Promise((resolve) => {
-    img.onload = resolve;
-    img.onerror = resolve;
-  });
-  
-  // ✅ Calcular dimensiones máximas (80% de la pantalla)
-  const maxWidth = window.innerWidth * 0.8;
-  const maxHeight = window.innerHeight * 0.8;
-  
-  let imageWidth = img.width;
-  let imageHeight = img.height;
-  
-  // ✅ Si la imagen es más grande que la pantalla, escalarla
-  if (imageWidth > maxWidth || imageHeight > maxHeight) {
-    const ratio = Math.min(maxWidth / imageWidth, maxHeight / imageHeight);
-    imageWidth = imageWidth * ratio;
-    imageHeight = imageHeight * ratio;
-  }
-  
-  try {
-    await Swal.fire({
-      imageUrl: imagenUrl,
-      imageAlt: 'Imagen de referencia del servicio',
-      width: `${imageWidth + 40}px`,  // +40 para padding del modal
-      showConfirmButton: true,
-      confirmButtonText: 'Cerrar',
-      imageWidth: `${imageWidth}px`,
-      imageHeight: `${imageHeight}px`,
-      backdrop: true,
-      allowOutsideClick: true,
-      customClass: {
-        image: 'servicio-imagen-modal'
-      }
-    });
-  } catch (err) {
-    console.error('Error mostrando imagen:', err);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'No se pudo cargar la imagen'
-    });
-  }
-}
-
-onImageError(event: Event) {
-  const img = event.target as HTMLImageElement;
-  img.src = 'assets/images/default-image.png';
-  console.warn('Error cargando imagen, usando default');
-}
-
-/**
- * Verifica si la orden tiene clientes diferentes por servicio
- */
-tieneClientesDiferentes(): boolean {
-  if (!this.orden?.detalles || this.orden.detalles.length <= 1) return false;
-  
-  // ✅ Tipar explícitamente el parámetro 'd' como any
-  const clientes: string[] = this.orden.detalles
-    .map((d: any) => d.cliente_nombre)
-    .filter((c: string) => c && c.trim() !== '');
-  
-  // Si hay al menos un cliente definido y no todos son iguales
-  if (clientes.length === 0) return false;
-  
-  const primerCliente = clientes[0];
-  return clientes.some((c: string) => c !== primerCliente);
-}
-/**
- * Verifica si la orden es para un solo cliente
- */
-tieneClienteUnico(): boolean {
-  if (!this.orden?.detalles || this.orden.detalles.length === 0) return false;
-  
-  // Si la orden tiene cliente_nombre global
-  if (this.orden.cliente_nombre) return true;
-  
-  // Si todos los detalles tienen el mismo cliente
-  // ✅ Tipar explícitamente los parámetros
-  const clientes: string[] = this.orden.detalles
-    .map((d: any) => d.cliente_nombre)
-    .filter((c: string) => c && c.trim() !== '');
-  
-  if (clientes.length === 0) return false;
-  const primerCliente = clientes[0];
-  return clientes.every((c: string) => c === primerCliente);
-}
-/**
- * Obtiene el nombre del cliente para un servicio
- */
-getClienteServicio(detalle: any): string {
-  if (this.orden.cliente_nombre) return this.orden.cliente_nombre;
-  return detalle.cliente_nombre || 'Sin cliente';
-}
-
-/**
- * Obtiene la deuda total de la orden
- */
-getDeudaTotal(): number {
-  return this.saldo;
-}
-// orden-detalle.component.ts - MODIFICAR getDeudaPorServicio()
-
-// orden-detalle.component.ts - AGREGAR/MODIFICAR ESTOS MÉTODOS
-
-// orden-detalle.component.ts - MODIFICAR getDeudaPorServicio()
-
-/**
- * Obtiene la deuda por servicio
- * ✅ AHORA FUNCIONA PARA CLIENTE ÚNICO Y CLIENTES DIFERENTES
- */
-getDeudaPorServicio(detalle: any): number {
-  if (!detalle) return 0;
-  
-  const precioServicio = parseFloat(detalle.precio_unitario) || 0;
-  
-  // ✅ Si la orden tiene cliente único, distribuir proporcionalmente
-  if (this.tieneClienteUnico()) {
-    const totalServicios = this.orden.detalles.length;
-    const totalOrden = parseFloat(this.orden.total) || 1;
-    return (precioServicio / totalOrden) * this.saldo;
-  }
-  
-  // ✅ Para clientes diferentes: calcular pagos específicos de este servicio
-  const pagosDelServicio = this.orden.pagos?.filter((pago: any) => {
-    if (!pago.observaciones) return false;
-    try {
-      const obs = typeof pago.observaciones === 'string' 
-        ? JSON.parse(pago.observaciones) 
-        : pago.observaciones;
-      return obs.detalle_id === detalle.id;
-    } catch {
-      return false;
-    }
-  }) || [];
-  
-  const totalPagadoServicio = pagosDelServicio.reduce((sum: number, p: any) => sum + Number(p.monto), 0);
-  const saldoPendiente = precioServicio - totalPagadoServicio;
-  
-  console.log(`💰 [${detalle.servicio?.nombre}] Precio: ${precioServicio}, Pagado: ${totalPagadoServicio}, Saldo: ${saldoPendiente}`);
-  
-  return Math.max(0, saldoPendiente);
-}
-
-// orden-detalle.component.ts - MODIFICAR pagarServicio() con mejor UI
-
-pagarServicio(detalle: any, index: number) {
-  const montoMaximo = this.getDeudaPorServicio(detalle);
-  const cliente = this.getClienteServicio(detalle);
-  const servicioNombre = detalle.servicio?.nombre || 'Servicio';
-  
-  if (montoMaximo <= 0) {
-    Swal.fire('Info', `El servicio "${servicioNombre}" ya está pagado`, 'info');
-    return;
-  }
-
-  Swal.fire({
-    title: `💳 Pagar Servicio: ${servicioNombre}`,
-    html: `
-      <div style="text-align: left; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
-        <p style="margin: 4px 0;"><strong>👤 Cliente:</strong> ${cliente}</p>
-        <p style="margin: 4px 0;"><strong>💼 Servicio:</strong> ${servicioNombre}</p>
-        <p style="margin: 4px 0;"><strong>💰 Precio:</strong> ${this.monedaPipe.transform(detalle.precio_unitario)}</p>
-        <p style="margin: 4px 0; color: ${montoMaximo > 0 ? '#f43f5e' : '#10b981'}; font-weight: 700;">
-          <strong>💳 Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}
-        </p>
-        ${this.tieneClienteUnico() ? `
-          <p style="margin: 4px 0; font-size: 0.8rem; color: #64748b;">
-            <i class="fas fa-info-circle"></i> El pago se distribuirá proporcionalmente entre todos los servicios
-          </p>
-        ` : ''}
-      </div>
-      <input type="number" id="monto" class="swal2-input" 
-             placeholder="Monto (S/)" step="0.01" min="0.01" 
-             max="${montoMaximo}" value="${montoMaximo.toFixed(2)}">
-      <select id="metodo" class="swal2-select" style="width: 100%; margin-bottom: 10px;">
-        <option value="efectivo">💵 Efectivo</option>
-        <option value="tarjeta">💳 Tarjeta</option>
-        <option value="transferencia">🏦 Transferencia</option>
-        <option value="yape">📱 Yape</option>
-        <option value="plin">📱 Plin</option>
-      </select>
-      <input type="text" id="referencia" class="swal2-input" placeholder="Referencia (opcional)">
-      <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
-        <i class="fas fa-info-circle"></i> Este pago se registrará para el servicio "<strong>${servicioNombre}</strong>"
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '✅ Registrar Pago',
-    cancelButtonText: '❌ Cancelar',
-    preConfirm: () => {
-      const monto = (document.getElementById('monto') as HTMLInputElement).value;
-      const metodo = (document.getElementById('metodo') as HTMLSelectElement).value;
-      const referencia = (document.getElementById('referencia') as HTMLInputElement).value;
-      
-      if (!monto || monto.trim() === '') {
-        Swal.showValidationMessage('Ingrese un monto');
-        return false;
-      }
-      
-      const montoNumerico = parseFloat(monto);
-      
-      if (isNaN(montoNumerico) || montoNumerico <= 0) {
-        Swal.showValidationMessage('Ingrese un monto válido mayor a 0');
-        return false;
-      }
-      
-      if (montoNumerico > montoMaximo) {
-        Swal.showValidationMessage(`El monto no puede exceder el saldo pendiente (${this.monedaPipe.transform(montoMaximo)})`);
-        return false;
-      }
-      
-      return { 
-        monto: montoNumerico, 
-        metodo_pago: metodo, 
-        referencia,
-        detalleId: detalle.id,
-        servicioNombre: servicioNombre,
-        cliente: cliente
-      };
-    }
-  }).then((result) => {
-    if (result.isConfirmed) {
-      this.registrarPagoConDetalle(result.value);
-    }
-  });
-}
-
-/**
- * Registra un pago asociado a un detalle específico
- */
-registrarPagoConDetalle(data: any) {
-  const ordenId = this.orden.id;
-  
-  const referencia = `Pago para ${data.servicioNombre}`;
-  
-  console.log('📝 [DEBUG] Registrando pago para servicio:', {
-    orden_id: ordenId,
-    detalle_id: data.detalleId,
-    servicio: data.servicioNombre,
-    cliente: data.cliente,
-    monto: data.monto,
-    metodo: data.metodo_pago,
-    referencia: referencia
-  });
-  
-  this.subscriptions.push(
-    this.pagoService.registrarPago({
-      orden_id: Number(ordenId),
-      monto: data.monto,
-      metodo_pago: data.metodo_pago,
-      referencia: referencia,
-      observaciones: JSON.stringify({
-        detalle_id: data.detalleId,
-        servicio: data.servicioNombre,
-        cliente: data.cliente
-      })
-    }).subscribe({
-      next: () => {
-        Swal.fire({
-          icon: 'success',
-          title: '¡Pago registrado!',
-          text: `Pago de ${this.monedaPipe.transform(data.monto)} para "${data.servicioNombre}" registrado correctamente`,
-          timer: 2000,
-          showConfirmButton: false
-        });
-        this.cargarOrden(this.orden.id);
-      },
-      error: (error) => {
-        console.error('❌ Error registrando pago:', error);
-        Swal.fire('Error', 'No se pudo registrar el pago', 'error');
-      }
-    })
-  );
-}
-// orden-detalle.component.ts - AGREGAR ESTE MÉTODO
-
-// orden-detalle.component.ts - MODIFICAR mostrarBotonAgregarPago()
-
-/**
- * Determina si debe mostrarse el botón de "Agregar Pago" general
- * ✅ AHORA SE MUESTRA SIEMPRE QUE HAYA SALDO
- */
-mostrarBotonAgregarPago(): boolean {
-  // ✅ Siempre mostrar si hay saldo > 0
-  return this.saldo > 0;
-}
-
 }
