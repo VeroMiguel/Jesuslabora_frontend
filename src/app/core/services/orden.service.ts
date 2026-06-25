@@ -265,6 +265,19 @@ eliminarImagenDetalle(detalleId: number): Observable<any> {
     })
   );
 }
+// orden.service.ts - AGREGAR ESTE MÉTODO
 
+/**
+ * Actualiza un detalle de orden específico (cliente_nombre y detalle_cliente)
+ */
+actualizarDetalleOrden(detalleId: number, data: { cliente_nombre?: string, detalle_cliente?: string }): Observable<any> {
+  return this.http.put(`${this.apiUrl}/detalles/${detalleId}`, data).pipe(
+    timeout(10000),
+    catchError(error => {
+      console.error(`Error en actualizarDetalleOrden(${detalleId}):`, error);
+      return throwError(() => error);
+    })
+  );
+}
 
 }

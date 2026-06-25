@@ -42,6 +42,24 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   subiendoImagen = false;
   private subscriptions: Subscription[] = [];
   
+  // ✅ Propiedades para el modal de historial de pagos por servicio
+  modalHistorialVisible: boolean = false;
+  modalHistorialServicio: any = null;
+  modalHistorialPagos: any[] = [];
+  modalHistorialTotalPagado: number = 0;
+  modalHistorialSaldo: number = 0;
+  
+  // ✅ Propiedades para el modal de "Ver todos los pagos"
+  modalTodosPagosVisible: boolean = false;
+  // ============================================================
+  // ✅ PROPIEDADES PARA MODAL DE CLIENTE POR SERVICIO
+  // ============================================================
+
+  modalClienteVisible: boolean = false;
+  modalClienteData: any = null;
+// ✅ NUEVA: Guardar referencia al detalle que se está editando
+modalClienteDetalleRef: any = null;
+  
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   constructor(
@@ -254,55 +272,28 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   }
 
   // ============================================================
-  // ✅ MÉTODOS DE PAGO - VERSIÓN MEJORADA
+  // ✅ MÉTODOS DE PAGO
   // ============================================================
 
-  /**
-   * Determina si debe mostrarse el botón de "Agregar Pago" general
-   * ✅ SOLO se muestra cuando:
-   * - La orden tiene clientes DIFERENTES por servicio
-   * - Hay saldo > 0
-   * - La orden NO está terminada
-   */
   mostrarBotonAgregarPago(): boolean {
-    // ✅ Si la orden está terminada, NO mostrar
     if (this.orden?.estado === 'terminado') return false;
-    
-    // ✅ Si no hay saldo, NO mostrar
     if (this.saldo <= 0) return false;
-    
-    // ✅ Solo mostrar si la orden tiene clientes diferentes
-    // (para ese caso es necesario un pago global)
     return this.tieneClientesDiferentes();
   }
 
-  /**
-   * Determina si el botón "Pagar" de un servicio debe mostrarse
-   */
   mostrarBotonPagarServicio(detalle: any): boolean {
-    // ✅ Si la orden está terminada, NO mostrar
     if (this.orden?.estado === 'terminado') return false;
-    
-    // ✅ Si el servicio ya está pagado, NO mostrar
     const deuda = this.getDeudaPorServicio(detalle);
     if (deuda <= 0) return false;
-    
-    // ✅ Mostrar si hay deuda
     return true;
   }
 
-  /**
-   * Obtiene la deuda por servicio (con el saldo correcto)
-   */
   getDeudaPorServicio(detalle: any): number {
     if (!detalle) return 0;
-    
-    // ✅ Si la orden está terminada, la deuda es 0
     if (this.orden?.estado === 'terminado') return 0;
     
     const precioServicio = parseFloat(detalle.precio_unitario) || 0;
     
-    // ✅ Obtener pagos específicos de este servicio
     const pagosDelServicio = this.orden.pagos?.filter((pago: any) => {
       if (pago.observaciones) {
         try {
@@ -325,14 +316,9 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     const totalPagadoServicio = pagosDelServicio.reduce((sum: number, p: any) => sum + Number(p.monto), 0);
     const saldoPendiente = precioServicio - totalPagadoServicio;
     
-    console.log(`💰 [${detalle.servicio?.nombre}] Precio: ${precioServicio}, Pagado: ${totalPagadoServicio}, Saldo: ${saldoPendiente}`);
-    
     return Math.max(0, saldoPendiente);
   }
 
-  /**
-   * Verifica si la orden tiene clientes diferentes por servicio
-   */
   tieneClientesDiferentes(): boolean {
     if (!this.orden?.detalles || this.orden.detalles.length <= 1) return false;
     
@@ -345,12 +331,8 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     return clientes.some((c: string) => c !== primerCliente);
   }
 
-  /**
-   * Verifica si la orden es para un solo cliente
-   */
   tieneClienteUnico(): boolean {
     if (!this.orden?.detalles || this.orden.detalles.length === 0) return false;
-    
     if (this.orden.cliente_nombre) return true;
     
     const clientes: string[] = this.orden.detalles
@@ -362,17 +344,78 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     return clientes.every((c: string) => c === primerCliente);
   }
 
-  /**
-   * Obtiene el nombre del cliente para un servicio
-   */
   getClienteServicio(detalle: any): string {
     if (this.orden.cliente_nombre) return this.orden.cliente_nombre;
     return detalle.cliente_nombre || 'Sin cliente';
   }
 
   /**
-   * ✅ PAGO INDIVIDUAL POR SERVICIO
+   * ✅ Obtiene los pagos filtrados por un servicio específico
    */
+  getPagosPorServicio(detalle: any): any[] {
+    if (!this.orden?.pagos) return [];
+    
+    return this.orden.pagos.filter((pago: any) => {
+      // Buscar por detalle_id en observaciones
+      if (pago.observaciones) {
+        try {
+          const obs = typeof pago.observaciones === 'string' 
+            ? JSON.parse(pago.observaciones) 
+            : pago.observaciones;
+          if (obs.detalle_id === detalle.id) {
+            return true;
+          }
+        } catch {
+          // Ignorar
+        }
+      }
+      // Buscar por nombre del servicio en referencia
+      if (pago.referencia && pago.referencia.includes(detalle.servicio?.nombre)) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  /**
+   * ✅ Abre el modal de historial de pagos por servicio
+   */
+  abrirHistorialServicio(detalle: any) {
+    const pagos = this.getPagosPorServicio(detalle);
+    const totalPagado = pagos.reduce((sum, p) => sum + Number(p.monto), 0);
+    const precioServicio = parseFloat(detalle.precio_unitario) || 0;
+    const saldo = precioServicio - totalPagado;
+    
+    this.modalHistorialServicio = detalle;
+    this.modalHistorialPagos = pagos;
+    this.modalHistorialTotalPagado = totalPagado;
+    this.modalHistorialSaldo = Math.max(0, saldo);
+    this.modalHistorialVisible = true;
+  }
+
+  /**
+   * ✅ Cierra el modal de historial de pagos
+   */
+  cerrarHistorialServicio() {
+    this.modalHistorialVisible = false;
+    this.modalHistorialServicio = null;
+    this.modalHistorialPagos = [];
+  }
+
+  /**
+   * ✅ Abre el modal de "Ver todos los pagos"
+   */
+  abrirHistorialCompleto() {
+    this.modalTodosPagosVisible = true;
+  }
+
+  /**
+   * ✅ Cierra el modal de "Ver todos los pagos"
+   */
+  cerrarTodosPagos() {
+    this.modalTodosPagosVisible = false;
+  }
+
   pagarServicio(detalle: any, index: number) {
     const montoMaximo = this.getDeudaPorServicio(detalle);
     const cliente = this.getClienteServicio(detalle);
@@ -450,9 +493,6 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * ✅ PAGO GLOBAL (SOLO PARA CLIENTES DIFERENTES)
-   */
   agregarPago() {
     const saldoActual = this.saldo;
     
@@ -461,7 +501,6 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // ✅ Mostrar cómo se distribuirá el pago
     const serviciosConDeuda = this.orden.detalles.filter((d: any) => {
       return this.getDeudaPorServicio(d) > 0;
     });
@@ -543,9 +582,6 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * ✅ Registra un pago global (se distribuye entre servicios con deuda)
-   */
   registrarPagoGlobal(data: any) {
     const serviciosConDeuda = this.orden.detalles.filter((d: any) => {
       return this.getDeudaPorServicio(d) > 0;
@@ -602,9 +638,6 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * ✅ Registra un pago asociado a un detalle específico
-   */
   registrarPagoConDetalle(data: any) {
     const ordenId = this.orden.id;
     const referencia = data.referencia || `Pago para ${data.servicioNombre}`;
@@ -899,6 +932,48 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     console.warn('Error cargando imagen, usando default');
   }
 
+  /**
+   * ✅ Abre el modal de detalle del cliente con información completa
+   */
+  abrirModalCliente() {
+    if (!this.orden.cliente_nombre) return;
+    
+    Swal.fire({
+      title: '👤 Información del Cliente',
+      html: `
+        <div style="text-align: left; padding: 10px 0;">
+          <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 12px;">
+            <p style="margin: 4px 0;"><strong>Nombre:</strong> ${this.orden.cliente_nombre}</p>
+          </div>
+          ${this.orden.detalle_cliente ? `
+            <div style="padding: 12px; background: #f8fafc; border-radius: 12px; border-left: 4px solid #6366f1;">
+              <p style="margin: 0 0 4px 0;"><strong>📋 Detalle del Caso:</strong></p>
+              <p style="margin: 4px 0 0 0; color: #475569; line-height: 1.6; white-space: pre-wrap;">${this.orden.detalle_cliente}</p>
+            </div>
+          ` : `
+            <div style="padding: 12px; background: #f8fafc; border-radius: 12px; color: #94a3b8; font-style: italic; text-align: center;">
+              <i class="fas fa-info-circle"></i> Sin detalles adicionales
+            </div>
+          `}
+          ${this.orden.detalles && this.orden.detalles.length > 0 ? `
+            <div style="margin-top: 16px; padding: 12px; background: #f1f5f9; border-radius: 12px;">
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: #0f172a;">📊 Servicios asociados:</p>
+              ${this.orden.detalles.map((d: any) => `
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem;">
+                  <span>${d.servicio?.nombre || 'Sin servicio'}</span>
+                  <span style="color: #10b981; font-weight: 600;">${this.monedaPipe.transform(d.precio_unitario)}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `,
+      confirmButtonText: 'Cerrar',
+      confirmButtonColor: '#6366f1',
+      width: '450px'
+    });
+  }
+
   ngOnDestroy() {
     this.subscriptions.forEach(sub => {
       if (sub && typeof sub.unsubscribe === 'function') {
@@ -907,4 +982,188 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
     });
     console.log('🧹 OrdenDetalleComponent destruido');
   }
+/**
+ * ✅ Abre el modal de detalle del cliente desde el servicio
+ */
+abrirModalClienteServicio(detalle: any) {
+  const clienteNombre = this.getClienteServicio(detalle);
+  
+  // ✅ Obtener el detalle del caso (puede venir del detalle o de la orden)
+  let detalleCaso = null;
+  
+  // Primero buscar en el detalle específico
+  if (detalle.detalle_cliente) {
+    detalleCaso = detalle.detalle_cliente;
+  } 
+  // Si no, buscar en la orden (para cliente único)
+  else if (this.orden.detalle_cliente) {
+    detalleCaso = this.orden.detalle_cliente;
+  }
+  
+  // Obtener todos los servicios de este cliente
+  let serviciosDelCliente = [];
+  
+  if (this.tieneClienteUnico()) {
+    // Si es cliente único, mostrar todos los servicios
+    serviciosDelCliente = this.orden.detalles.map((d: any) => ({
+      nombre: d.servicio?.nombre || 'Sin servicio',
+      precio: d.precio_unitario
+    }));
+  } else {
+    // Si son clientes diferentes, mostrar solo los servicios de este cliente
+    serviciosDelCliente = this.orden.detalles
+      .filter((d: any) => d.cliente_nombre === clienteNombre)
+      .map((d: any) => ({
+        nombre: d.servicio?.nombre || 'Sin servicio',
+        precio: d.precio_unitario
+      }));
+  }
+  
+  // ✅ Guardar los datos completos del cliente
+  this.modalClienteData = {
+    nombre: clienteNombre,
+    detalle: detalleCaso,
+    servicios: serviciosDelCliente,
+    detalleRef: detalle,
+    esClienteUnico: this.tieneClienteUnico()
+  };
+  
+  // ✅ Guardar la referencia del detalle
+  this.modalClienteDetalleRef = detalle;
+  
+  this.modalClienteVisible = true;
+}
+
+/**
+ * ✅ Cierra el modal de cliente
+ */
+cerrarModalCliente() {
+  this.modalClienteVisible = false;
+  this.modalClienteData = null;
+  this.modalClienteDetalleRef = null;
+}
+
+/**
+ * ✅ Abre el editor de cliente desde el modal
+ * ✅ AHORA FUNCIONA PARA CLIENTE ÚNICO Y CLIENTES DIFERENTES
+ */
+editarDetalleClienteDesdeModal() {
+  // ✅ Obtener el detalle que se está editando ANTES de cerrar el modal
+  const detalle = this.modalClienteDetalleRef;
+  
+  // ✅ Guardar los datos del cliente antes de cerrar
+  let clienteNombre = '';
+  let detalleCaso = '';
+  
+  if (detalle) {
+    // Si hay un detalle, usar sus datos
+    clienteNombre = detalle.cliente_nombre || '';
+    detalleCaso = detalle.detalle_cliente || '';
+  } else if (this.orden.cliente_nombre) {
+    // Si no hay detalle pero la orden tiene cliente, usar los de la orden
+    clienteNombre = this.orden.cliente_nombre || '';
+    detalleCaso = this.orden.detalle_cliente || '';
+  }
+  
+  // ✅ Cerrar el modal de información del cliente
+  this.cerrarModalCliente();
+  
+  // ✅ Verificar si es cliente único o múltiple
+  const esClienteUnico = this.tieneClienteUnico();
+  
+  if (esClienteUnico) {
+    // ✅ Si es cliente único, usar el método existente (edita la orden)
+    this.editarDetalleCliente();
+  } else if (detalle) {
+    // ✅ Si es cliente diferente por servicio, editar el detalle específico
+    // ✅ PASAR EL DETALLE CON LOS DATOS ACTUALES
+    this.editarDetalleClientePorServicio(detalle, clienteNombre, detalleCaso);
+  } else {
+    // Fallback: usar el método general
+    this.editarDetalleCliente();
+  }
+}
+/**
+ * ✅ Edita el cliente y detalle de un servicio específico (para clientes diferentes)
+ * ✅ MODIFICADO: recibe los datos directamente para evitar que se pierdan
+ */
+editarDetalleClientePorServicio(detalle: any, clienteNombre?: string, detalleCaso?: string) {
+  // ✅ Usar los valores pasados o los del detalle
+  const nombreCliente = clienteNombre !== undefined ? clienteNombre : (detalle.cliente_nombre || '');
+  const detalleCliente = detalleCaso !== undefined ? detalleCaso : (detalle.detalle_cliente || '');
+  
+  Swal.fire({
+    title: 'Editar Detalle del Cliente',
+    html: `
+      <div style="text-align: left;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
+        <input id="cliente-nombre-modal" class="swal2-input" 
+               value="${nombreCliente}" 
+               placeholder="Nombre del paciente"
+               style="margin-bottom: 16px;">
+        
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
+        <textarea id="detalle-cliente-modal" class="swal2-textarea" 
+                  rows="5" 
+                  placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${detalleCliente}</textarea>
+        
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+          <i class="fas fa-info-circle"></i> Incluya información relevante como:
+          pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar cambios',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => {
+      const nombre = (document.getElementById('cliente-nombre-modal') as HTMLInputElement).value;
+      const detalleTexto = (document.getElementById('detalle-cliente-modal') as HTMLTextAreaElement).value;
+      
+      if (!nombre.trim()) {
+        Swal.showValidationMessage('El nombre del cliente es requerido');
+        return false;
+      }
+      
+      return { cliente_nombre: nombre, detalle_cliente: detalleTexto };
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // ✅ Actualizar el detalle específico en la base de datos
+      this.subscriptions.push(
+        this.ordenService.actualizarDetalleOrden(detalle.id, {
+          cliente_nombre: result.value.cliente_nombre,
+          detalle_cliente: result.value.detalle_cliente
+        }).subscribe({
+          next: () => {
+            // ✅ Actualizar localmente el detalle
+            detalle.cliente_nombre = result.value.cliente_nombre;
+            detalle.detalle_cliente = result.value.detalle_cliente;
+            
+            // ✅ También actualizar en modalClienteData si existe
+            if (this.modalClienteData) {
+              this.modalClienteData.nombre = result.value.cliente_nombre;
+              this.modalClienteData.detalle = result.value.detalle_cliente;
+            }
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Actualizado',
+              text: 'La información del cliente se ha actualizado correctamente',
+              timer: 1500,
+              showConfirmButton: false
+            });
+            
+            // ✅ Recargar la orden para actualizar todo
+            this.cargarOrden(this.orden.id);
+          },
+          error: (error) => {
+            console.error('Error actualizando cliente del servicio:', error);
+            Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+          }
+        })
+      );
+    }
+  });
+}
 }
