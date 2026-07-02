@@ -1,329 +1,100 @@
-  .reporte-container {
-      padding: 20px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
+/* ============================================================ */
+/* ESTILOS PRINCIPALES - REPORTE POR DOCTOR */
+/* ============================================================ */
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #6366f1, #4f46e5);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: 0;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 15px;
-    }
-
-    .btn-secondary {
-      background: var(--in, #f1f5f9);
-      color: var(--txt, #0f172a);
-      border: 1px solid var(--bor, #e2e8f0);
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn-export {
-      background: #10b981;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn-export:hover {
-      background: #059669;
-    }
-
-    .resumen-card {
-      background: var(--surf, #ffffff);
-      border: 1px solid var(--bor, #e2e8f0);
-      border-radius: 20px;
-      padding: 25px;
-      margin-bottom: 30px;
-    }
-
-    .resumen-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat .label {
-      display: block;
-      font-size: 0.9rem;
-      color: var(--mut, #64748b);
-      margin-bottom: 8px;
-    }
-
-    .stat .value {
-      display: block;
-      font-size: 2rem;
-      font-weight: 800;
-    }
-
-    .deuda {
-      color: #f43f5e;
-    }
-
-    .tabla-card {
-      background: var(--surf, #ffffff);
-      border: 1px solid var(--bor, #e2e8f0);
-      border-radius: 20px;
-      padding: 25px;
-      margin-bottom: 30px;
-    }
-
-    .table-responsive {
-      overflow-x: auto;
-    }
-
-    .reporte-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .reporte-table th,
-    .reporte-table td {
-      padding: 15px;
-      text-align: left;
-      border-bottom: 1px solid var(--bor, #e2e8f0);
-    }
-
-    .reporte-table th {
-      background: var(--in, #f8fafc);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    .reporte-table tfoot th {
-      background: var(--in, #f8fafc);
-      border-top: 2px solid var(--bor, #e2e8f0);
-    }
-
-    .doctor-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .doctor-thumb {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      object-fit: cover;
-    }
-
-    .numero, .monto {
-      text-align: right;
-      font-family: monospace;
-    }
-
-    .whatsapp {
-      color: #25D366;
-      margin-right: 5px;
-    }
-
-    .vencidas {
-      color: #f43f5e;
-      font-weight: 600;
-    }
-
-    .btn-icon {
-      width: 36px;
-      height: 36px;
-      border: none;
-      border-radius: 8px;
-      background: var(--in, #f1f5f9);
-      color: var(--txt, #0f172a);
-      cursor: pointer;
-    }
-
-    .btn-icon:hover {
-      background: #6366f1;
-      color: white;
-    }
-
-    .ranking-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-    }
-
-    .ranking-card {
-      background: var(--surf, #ffffff);
-      border: 1px solid var(--bor, #e2e8f0);
-      border-radius: 20px;
-      padding: 25px;
-    }
-
-    .ranking-card h3 {
-      margin-top: 0;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ranking-item {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 10px;
-      border-bottom: 1px solid var(--bor, #e2e8f0);
-    }
-
-    .ranking-item:last-child {
-      border-bottom: none;
-    }
-
-    .posicion {
-      width: 30px;
-      height: 30px;
-      background: var(--in, #f1f5f9);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-    }
-
-    .nombre {
-      flex: 1;
-      font-weight: 500;
-    }
-
-    .valor {
-      font-weight: 700;
-    }
-
-    .loading-container {
-      display: flex;
-      justify-content: center;
-      padding: 40px;
-    }
-
-    [data-theme="dark"] .resumen-card,
-    [data-theme="dark"] .tabla-card,
-    [data-theme="dark"] .ranking-card {
-      background: #0f172a;
-    }
-    /* Agregar estas clases al final */
-
-.doctor-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.reporte-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.doctor-nombre {
-  font-weight: 500;
-}
-
-.contacto-info {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--txt);
-}
-
-.whatsapp {
-  color: #25D366;
-  font-size: 1.1rem;
-}
-
-.sin-contacto {
-  color: var(--mut);
-  font-style: italic;
-}
-
-/* Estados de deuda */
-.deuda-positiva {
-  color: #f43f5e;
-  font-weight: 600;
-}
-
-.deuda-cero {
-  color: #10b981;
-  font-weight: 600;
-}
-
-/* Estados de vencidas */
-.vencidas-positivo {
-  color: #f43f5e;
-  font-weight: 600;
-}
-
-.vencidas-cero {
-  color: var(--mut);
-}
-
-/* Fila completa cuando está pagado */
-.fila-pagado {
-  background-color: rgba(16, 185, 129, 0.05);
-}
-
-.fila-pagado:hover {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-}
-
-/* Ajustes para la tabla */
-.reporte-table td {
-  padding: 12px 15px;
-  vertical-align: middle;
-}
-
-.reporte-table tbody tr:hover {
-  background-color: var(--in);
-}
-
-.reporte-table .monto {
-  font-family: monospace;
-  font-size: 0.95rem;
-}
-
-.reporte-table .numero {
-  font-family: monospace;
-  text-align: center;
-}
-/* Estilos de paginación y filtros */
-.tabla-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
   gap: 15px;
 }
 
-.tabla-header h3 {
-  margin: 0;
+.btn-secondary {
+  background: var(--in, #f1f5f9);
+  color: var(--txt, #0f172a);
+  border: 1px solid var(--bor, #e2e8f0);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-export {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
+
+.btn-export:hover {
+  background: #059669;
+}
+
+/* ============================================================ */
+/* TARJETAS DE RESUMEN */
+/* ============================================================ */
+
+.resumen-card {
+  background: var(--surf, #ffffff);
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.resumen-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat .label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--mut, #64748b);
+  margin-bottom: 8px;
+}
+
+.stat .value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+/* ============================================================ */
+/* FILTROS */
+/* ============================================================ */
 
 .filtros-panel {
   background: var(--surf, #ffffff);
@@ -335,7 +106,7 @@
 
 .filtros-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 15px;
   align-items: flex-end;
 }
@@ -367,6 +138,29 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
+input[type="month"] {
+  padding: 10px 12px;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 10px;
+  background: var(--in, #f8fafc);
+  color: var(--txt, #0f172a);
+  font-size: 0.9rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+input[type="month"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] input[type="month"] {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
 .filtro-actions {
   display: flex;
   gap: 10px;
@@ -388,6 +182,64 @@
   border-color: #f43f5e;
 }
 
+/* ============================================================ */
+/* BOTÓN VER DETALLE DEL PACIENTE BUSCADO */
+/* ============================================================ */
+
+.paciente-buscado-actions {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+  grid-column: span 1;
+}
+
+.btn-ver-paciente-buscado {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-ver-paciente-buscado:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+/* ============================================================ */
+/* TABLA DE RENDIMIENTO */
+/* ============================================================ */
+
+.tabla-card {
+  background: var(--surf, #ffffff);
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 30px;
+}
+
+.tabla-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.tabla-header h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .items-per-page {
   display: flex;
   align-items: center;
@@ -404,6 +256,245 @@
   color: var(--txt, #0f172a);
   cursor: pointer;
 }
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.reporte-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reporte-table th,
+.reporte-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--bor, #e2e8f0);
+}
+
+.reporte-table th {
+  background: var(--in, #f8fafc);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reporte-table tfoot th {
+  background: var(--in, #f8fafc);
+  border-top: 2px solid var(--bor, #e2e8f0);
+}
+
+.reporte-table tbody tr:hover {
+  background-color: var(--in);
+}
+
+.reporte-table .monto {
+  font-family: monospace;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.reporte-table .numero {
+  font-family: monospace;
+  text-align: center;
+}
+
+/* ============================================================ */
+/* ESTADOS DE LA TABLA */
+/* ============================================================ */
+
+.deuda-positiva {
+  color: #f43f5e;
+  font-weight: 600;
+}
+
+.deuda-cero {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.vencidas-positivo {
+  color: #f43f5e;
+  font-weight: 600;
+}
+
+.vencidas-cero {
+  color: var(--mut);
+}
+
+.fila-pagado {
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+.fila-pagado:hover {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.facturado {
+  color: #6366f1;
+}
+
+.pagado {
+  color: #10b981;
+}
+
+.fecha {
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 40px;
+  color: var(--mut, #64748b);
+}
+
+/* ============================================================ */
+/* DOCTOR CELL */
+/* ============================================================ */
+
+.doctor-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doctor-nombre {
+  font-weight: 500;
+}
+
+.contacto-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--txt);
+}
+
+.whatsapp-icon {
+  color: #25D366;
+  margin-right: 5px;
+}
+
+.whatsapp-link {
+  color: var(--txt, #0f172a);
+  text-decoration: none;
+}
+
+.whatsapp-link:hover {
+  color: #25D366;
+  text-decoration: underline;
+}
+
+.sin-contacto {
+  color: var(--mut);
+  font-style: italic;
+}
+
+/* ============================================================ */
+/* BOTONES DE ACCIÓN */
+/* ============================================================ */
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--in, #f1f5f9);
+  color: var(--txt, #0f172a);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: #6366f1;
+  color: white;
+}
+
+.btn-export-doctor {
+  background: #10b981;
+  color: white;
+  margin-left: 5px;
+}
+
+.btn-export-doctor:hover {
+  background: #059669;
+}
+
+/* ============================================================ */
+/* RANKINGS */
+/* ============================================================ */
+
+.ranking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.ranking-card {
+  background: var(--surf, #ffffff);
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 20px;
+  padding: 25px;
+}
+
+.ranking-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  border-bottom: 1px solid var(--bor, #e2e8f0);
+}
+
+.ranking-item:last-child {
+  border-bottom: none;
+}
+
+.posicion {
+  width: 30px;
+  height: 30px;
+  background: var(--in, #f1f5f9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.posicion.oro {
+  background: #fbbf24;
+  color: #000;
+}
+
+.posicion.plata {
+  background: #9ca3af;
+  color: #000;
+}
+
+.posicion.bronce {
+  background: #d97706;
+  color: #fff;
+}
+
+.nombre {
+  flex: 1;
+  font-weight: 500;
+}
+
+.valor {
+  font-weight: 700;
+}
+
+/* ============================================================ */
+/* PAGINACIÓN */
+/* ============================================================ */
 
 .pagination-info-text {
   text-align: center;
@@ -497,57 +588,361 @@
   min-width: auto;
 }
 
-.whatsapp-icon {
-  color: #25D366;
-  margin-right: 5px;
+/* ============================================================ */
+/* LOADING */
+/* ============================================================ */
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
 }
 
-.whatsapp-link {
+/* ============================================================ */
+/* MODAL DE PACIENTE - ESTILOS MEJORADOS */
+/* ============================================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-container {
+  background: var(--surf, #ffffff);
+  border-radius: 20px;
+  max-width: 600px;
+  width: 95%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease;
+}
+
+.modal-paciente {
+  max-width: 600px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--bor, #e2e8f0);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-header-left i {
+  color: #6366f1;
+  font-size: 1.2rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--txt, #0f172a);
-  text-decoration: none;
 }
 
-.whatsapp-link:hover {
-  color: #25D366;
-  text-decoration: underline;
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--in, #f1f5f9);
+  border: none;
+  color: var(--mut, #64748b);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
-.facturado {
+.modal-close:hover {
+  background: #f43f5e;
+  color: white;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  max-height: 65vh;
+}
+
+/* ============================================================ */
+/* MODAL - RESUMEN DEL PACIENTE */
+/* ============================================================ */
+
+.modal-paciente-resumen {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--in, #f8fafc);
+  border-radius: 12px;
+  border: 1px solid var(--bor, #e2e8f0);
+}
+
+.modal-paciente-resumen-item {
+  text-align: center;
+}
+
+.modal-paciente-resumen-item span {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.modal-paciente-resumen-item strong {
+  font-size: 1rem;
+  font-weight: 700;
+  display: block;
+}
+
+.modal-paciente-resumen-item .facturado {
   color: #6366f1;
 }
 
-.pagado {
+.modal-paciente-resumen-item .pagado {
   color: #10b981;
 }
 
-.fecha {
+.modal-paciente-resumen-item .deuda-positiva {
+  color: #f43f5e;
+}
+
+.modal-paciente-resumen-item .deuda-cero {
+  color: #10b981;
+}
+
+/* ============================================================ */
+/* MODAL - ÓRDENES DEL PACIENTE */
+/* ============================================================ */
+
+.modal-paciente-ordenes {
+  margin-bottom: 20px;
+}
+
+.modal-paciente-ordenes h4 {
+  font-size: 0.95rem;
+  margin: 0 0 12px 0;
+  color: var(--txt, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.modal-paciente-ordenes h4::before {
+  content: '📋';
+}
+
+.modal-paciente-orden-item {
+  background: var(--in, #f8fafc);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border: 1px solid var(--bor, #e2e8f0);
+  transition: all 0.2s;
+}
+
+.modal-paciente-orden-item:hover {
+  border-color: #6366f1;
+}
+
+.modal-paciente-orden-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.modal-paciente-orden-header .orden-id {
+  font-weight: 600;
   font-size: 0.85rem;
+  color: var(--txt, #0f172a);
   font-family: monospace;
 }
 
-/* Rankings con colores */
-.posicion.oro {
-  background: #fbbf24;
-  color: #000;
+.orden-estado {
+  font-size: 0.65rem;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
-.posicion.plata {
-  background: #9ca3af;
-  color: #000;
+.orden-estado.estado-pendiente {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.posicion.bronce {
-  background: #d97706;
-  color: #fff;
+.orden-estado.estado-terminado {
+  background: #d1fae5;
+  color: #065f46;
 }
 
-.empty-row {
-  text-align: center;
-  padding: 40px;
+.modal-paciente-orden-servicios {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.modal-paciente-servicio-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
   color: var(--mut, #64748b);
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Dark mode */
+.modal-paciente-servicio-item:last-child {
+  border-bottom: none;
+}
+
+.modal-paciente-servicio-item .servicio-nombre {
+  color: var(--txt, #0f172a);
+}
+
+.modal-paciente-servicio-item .servicio-precio {
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* ============================================================ */
+/* MODAL - HISTORIAL DE PAGOS */
+/* ============================================================ */
+
+.modal-paciente-pagos {
+  margin-bottom: 10px;
+}
+
+.modal-paciente-pagos h4 {
+  font-size: 0.95rem;
+  margin: 0 0 12px 0;
+  color: var(--txt, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.modal-paciente-pagos h4::before {
+  content: '💳';
+}
+
+.modal-paciente-pago-item {
+  background: var(--in, #f8fafc);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-left: 3px solid #10b981;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-left-width: 4px;
+  transition: all 0.2s;
+}
+
+.modal-paciente-pago-item:hover {
+  border-color: #6366f1;
+  border-left-color: #10b981;
+}
+
+.modal-paciente-pago-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-paciente-pago-info .pago-fecha {
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  min-width: 120px;
+}
+
+.modal-paciente-pago-info .pago-monto {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #10b981;
+  min-width: 70px;
+}
+
+.modal-paciente-pago-info .pago-metodo {
+  font-size: 0.65rem;
+  padding: 2px 10px;
+  background: var(--surf, #ffffff);
+  border-radius: 12px;
+  color: var(--mut, #64748b);
+  border: 1px solid var(--bor, #e2e8f0);
+}
+
+.modal-paciente-pago-detalle {
+  font-size: 0.7rem;
+  color: var(--mut, #64748b);
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.modal-paciente-pago-detalle span {
+  background: var(--surf, #ffffff);
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--bor, #e2e8f0);
+}
+
+/* ============================================================ */
+/* ANIMACIONES */
+/* ============================================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================ */
+/* DARK MODE */
+/* ============================================================ */
+
+[data-theme="dark"] .resumen-card,
+[data-theme="dark"] .tabla-card,
+[data-theme="dark"] .ranking-card {
+  background: #0f172a;
+}
+
 [data-theme="dark"] .filtros-panel {
   background: #0f172a;
 }
@@ -569,245 +964,70 @@
 [data-theme="dark"] .pagination-number:hover:not(.active) {
   background: #334155;
 }
-/* Agregar al final de doctores-reporte.component.css */
 
-/* ============================================
-   RESPONSIVE EXTREMO (pantallas < 400px)
-   ============================================ */
-
-@media (max-width: 400px) {
-  .reporte-container {
-    padding: 8px;
-  }
-
-  /* Header - reorganizar */
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .header h1 {
-    font-size: 1.3rem;
-    text-align: center;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-export,
-  .btn-secondary {
-    width: 100%;
-    justify-content: center;
-    padding: 10px;
-    font-size: 0.85rem;
-  }
-
-  /* Tarjetas de resumen */
-  .resumen-stats {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-  }
-
-  .stat .value {
-    font-size: 1.3rem;
-  }
-
-  .stat .label {
-    font-size: 0.7rem;
-  }
-
-  /* Filtros */
-  .filtros-panel {
-    padding: 12px;
-  }
-
-  .filtros-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .filtro-group label {
-    font-size: 0.75rem;
-  }
-
-  .form-control {
-    padding: 8px;
-    font-size: 0.8rem;
-  }
-
-  .btn-clear {
-    width: 100%;
-    justify-content: center;
-    padding: 8px;
-  }
-
-  /* Tabla */
-  .tabla-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .tabla-header h3 {
-    font-size: 1rem;
-  }
-
-  .items-per-page {
-    justify-content: space-between;
-  }
-
-  .reporte-table th,
-  .reporte-table td {
-    padding: 8px 6px;
-    font-size: 0.7rem;
-  }
-
-  .doctor-thumb {
-    width: 28px;
-    height: 28px;
-  }
-
-  .doctor-nombre {
-    font-size: 0.7rem;
-  }
-
-  .contacto-info {
-    font-size: 0.65rem;
-  }
-
-  .numero, .monto {
-    font-size: 0.7rem;
-  }
-
-  .btn-icon {
-    width: 28px;
-    height: 28px;
-  }
-
-  .btn-icon i {
-    font-size: 0.7rem;
-  }
-
-  /* Rankings */
-  .ranking-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .ranking-card {
-    padding: 15px;
-  }
-
-  .ranking-card h3 {
-    font-size: 0.9rem;
-  }
-
-  .ranking-item {
-    padding: 6px;
-  }
-
-  .posicion {
-    width: 24px;
-    height: 24px;
-    font-size: 0.7rem;
-  }
-
-  .nombre {
-    font-size: 0.75rem;
-  }
-
-  .valor {
-    font-size: 0.75rem;
-  }
-
-  /* Paginación */
-  .pagination-nav-btn {
-    padding: 5px 10px;
-    font-size: 0.7rem;
-  }
-
-  .pagination-number {
-    min-width: 28px;
-    height: 28px;
-    font-size: 0.7rem;
-  }
+[data-theme="dark"] .modal-container {
+  background: #1e293b;
 }
 
-/* Pantallas entre 400px y 500px */
-@media (min-width: 401px) and (max-width: 500px) {
-  .header {
-    flex-wrap: wrap;
-  }
-
-  .header h1 {
-    width: 100%;
-    text-align: center;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .resumen-stats {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
-
-  .filtros-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .filtro-actions {
-    grid-column: span 2;
-  }
-}
-/* doctores-reporte.component.css - Agregar */
-.btn-export-doctor {
-  background: #10b981;
-  color: white;
-  margin-left: 5px;
+[data-theme="dark"] .modal-header {
+  border-color: #334155;
 }
 
-.btn-export-doctor:hover {
-  background: #059669;
-}
-/* doctores-reporte.component.css - AGREGAR ESTILOS PARA NUEVOS FILTROS */
-
-/* Ajustar grid de filtros para 4 columnas */
-.filtros-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 15px;
-  align-items: flex-end;
+[data-theme="dark"] .modal-header h3 {
+  color: #f1f5f9;
 }
 
-/* Estilo para input type="month" */
-input[type="month"] {
-  padding: 10px 12px;
-  border: 1px solid var(--bor, #e2e8f0);
-  border-radius: 10px;
-  background: var(--in, #f8fafc);
-  color: var(--txt, #0f172a);
-  font-size: 0.9rem;
-  width: 100%;
-  cursor: pointer;
+[data-theme="dark"] .modal-paciente-resumen {
+  background: #0f172a;
+  border-color: #334155;
 }
 
-input[type="month"]:focus {
-  outline: none;
+[data-theme="dark"] .modal-paciente-resumen-item span {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-paciente-orden-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .modal-paciente-orden-item:hover {
   border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
-[data-theme="dark"] input[type="month"] {
+[data-theme="dark"] .modal-paciente-pago-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .modal-paciente-pago-item:hover {
+  border-color: #6366f1;
+}
+
+[data-theme="dark"] .modal-paciente-pago-info .pago-metodo {
   background: #1e293b;
   border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-paciente-pago-detalle span {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-paciente-servicio-item {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .modal-paciente-servicio-item .servicio-nombre {
   color: #e2e8f0;
 }
 
-/* Responsive */
+/* ============================================================ */
+/* RESPONSIVE */
+/* ============================================================ */
+
 @media (max-width: 768px) {
   .filtros-grid {
     grid-template-columns: 1fr 1fr;
@@ -815,6 +1035,41 @@ input[type="month"]:focus {
   
   .filtro-actions {
     grid-column: span 2;
+  }
+  
+  .modal-paciente-resumen {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .modal-paciente {
+    max-width: 100%;
+  }
+  
+  .modal-paciente-pago-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .reporte-table th,
+  .reporte-table td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .modal-container {
+    max-width: 100%;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 0;
+  }
+  
+  .modal-header {
+    padding: 12px 16px;
+  }
+  
+  .modal-body {
+    padding: 12px 16px;
   }
 }
 
@@ -826,4 +1081,273 @@ input[type="month"]:focus {
   .filtro-actions {
     grid-column: span 1;
   }
+  
+  .modal-paciente-resumen {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .paciente-buscado-actions {
+    grid-column: span 1;
+    width: 100%;
+  }
+  
+  .btn-ver-paciente-buscado {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .header h1 {
+    text-align: center;
+    font-size: 1.5rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .btn-export,
+  .btn-secondary {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .resumen-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  
+  .stat .value {
+    font-size: 1.5rem;
+  }
+}
+
+/* ============================================================ */
+/* RESPONSIVE EXTREMO (pantallas < 400px) */
+/* ============================================================ */
+
+@media (max-width: 400px) {
+  .reporte-container {
+    padding: 8px;
+  }
+
+  .header h1 {
+    font-size: 1.2rem;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-export,
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .resumen-stats {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .stat .value {
+    font-size: 1.2rem;
+  }
+
+  .stat .label {
+    font-size: 0.65rem;
+  }
+
+  .filtros-panel {
+    padding: 12px;
+  }
+
+  .filtros-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .filtro-group label {
+    font-size: 0.7rem;
+  }
+
+  .form-control {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .btn-clear {
+    width: 100%;
+    justify-content: center;
+    padding: 6px;
+  }
+
+  .tabla-header h3 {
+    font-size: 0.9rem;
+  }
+
+  .items-per-page {
+    font-size: 0.7rem;
+  }
+
+  .per-page-select {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+  }
+
+  .reporte-table th,
+  .reporte-table td {
+    padding: 6px 4px;
+    font-size: 0.65rem;
+  }
+
+  .doctor-nombre {
+    font-size: 0.65rem;
+  }
+
+  .contacto-info {
+    font-size: 0.6rem;
+  }
+
+  .numero, .monto {
+    font-size: 0.65rem;
+  }
+
+  .btn-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .btn-icon i {
+    font-size: 0.6rem;
+  }
+
+  .ranking-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .ranking-card {
+    padding: 15px;
+  }
+
+  .ranking-card h3 {
+    font-size: 0.85rem;
+  }
+
+  .ranking-item {
+    padding: 6px;
+  }
+
+  .posicion {
+    width: 24px;
+    height: 24px;
+    font-size: 0.65rem;
+  }
+
+  .nombre {
+    font-size: 0.7rem;
+  }
+
+  .valor {
+    font-size: 0.7rem;
+  }
+
+  .pagination-nav-btn {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+
+  .pagination-number {
+    min-width: 24px;
+    height: 24px;
+    font-size: 0.65rem;
+  }
+
+  .pagination-info-text {
+    font-size: 0.7rem;
+  }
+
+  .modal-paciente-resumen {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .modal-paciente-resumen-item strong {
+    font-size: 0.85rem;
+  }
+
+  .modal-paciente-orden-item {
+    padding: 8px 10px;
+  }
+
+  .modal-paciente-orden-header .orden-id {
+    font-size: 0.7rem;
+  }
+
+  .modal-paciente-pago-item {
+    padding: 6px 10px;
+  }
+
+  .modal-paciente-pago-info .pago-fecha {
+    font-size: 0.6rem;
+    min-width: auto;
+  }
+
+  .modal-paciente-pago-info .pago-monto {
+    font-size: 0.8rem;
+  }
+
+  .modal-paciente-servicio-item {
+    font-size: 0.7rem;
+  }
+}
+/* doctores-reporte.component.css - AGREGAR */
+
+.modal-paciente-orden-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.modal-paciente-orden-header .orden-id {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--txt, #0f172a);
+  font-family: monospace;
+}
+
+.modal-paciente-orden-header .orden-doctor {
+  font-size: 0.7rem;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modal-paciente-orden-header .orden-doctor i {
+  font-size: 0.6rem;
+}
+
+.orden-estado {
+  font-size: 0.65rem;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-weight: 600;
 }

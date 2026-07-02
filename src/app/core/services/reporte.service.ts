@@ -86,9 +86,18 @@ export class ReporteService {
     return this.http.get(`${this.apiUrl}/tendencia-mensual`);
   }
 
-  exportarReportePorDoctor(doctorId: number): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/exportar/doctor/${doctorId}`, {
-      responseType: 'blob'
+// reporte.service.ts - MODIFICAR exportarReportePorDoctor
+
+exportarReportePorDoctor(doctorId: number, paciente?: string): Observable<Blob> {
+    let url = `${this.apiUrl}/exportar/doctor/${doctorId}`;
+    
+    // ✅ Si hay filtro por paciente, agregarlo como query param
+    if (paciente && paciente.trim() !== '') {
+        url += `?paciente=${encodeURIComponent(paciente)}`;
+    }
+    
+    return this.http.get(url, {
+        responseType: 'blob'
     });
-  }
+}
 }

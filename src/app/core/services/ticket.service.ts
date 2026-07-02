@@ -151,27 +151,52 @@ export class TicketService {
             <tbody>
       `;
 
-      pagosOrdenados.forEach(pago => {
-        const fecha = new Date(pago.creado_en).toLocaleString('es-PE', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        // ✅ Mostrar referencia si existe (ej: "Pago para Corona")
-        const referencia = pago.referencia || '';
-        
-        historialPagosHTML += `
-          <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="text-align: left; padding: 8px 4px;">${fecha}</td>
-            <td style="text-align: right; padding: 8px 4px; font-weight: 600; color: #10b981;">${this.formatearMoneda(pago.monto)}</td>
-            <td style="text-align: left; padding: 8px 4px; text-transform: capitalize;">${pago.metodo_pago}</td>
-            <td style="text-align: left; padding: 8px 4px; font-size: 0.75rem; color: #64748b;">${referencia}</td>
-          </tr>
-        `;
-      });
+// ticket.service.ts - MODIFICAR generarHTMLTicket()
+
+// En el historial de pagos, agregar el cliente si existe
+pagosOrdenados.forEach(pago => {
+  const fecha = new Date(pago.creado_en).toLocaleString('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  // ✅ Intentar obtener el cliente del pago
+  let clientePago = '';
+  try {
+    if (pago.observaciones) {
+      const obs = typeof pago.observaciones === 'string' 
+        ? JSON.parse(pago.observaciones) 
+        : pago.observaciones;
+      if (obs.cliente) {
+        clientePago = obs.cliente;
+      }
+    }
+  } catch {}
+  
+  // Si no se encontró en observaciones, buscar por referencia
+  if (!clientePago && pago.referencia) {
+    const match = pago.referencia.match(/Pago para (.+)/);
+    if (match) {
+      clientePago = match[1];
+    }
+  }
+  
+  const referencia = pago.referencia || '';
+  
+  historialPagosHTML += `
+    <tr style="border-bottom: 1px solid #f1f5f9;">
+      <td style="text-align: left; padding: 8px 4px;">${fecha}</td>
+      <td style="text-align: right; padding: 8px 4px; font-weight: 600; color: #10b981;">${this.formatearMoneda(pago.monto)}</td>
+      <td style="text-align: left; padding: 8px 4px; text-transform: capitalize;">${pago.metodo_pago}</td>
+      <td style="text-align: left; padding: 8px 4px; font-size: 0.75rem; color: #64748b;">
+        ${clientePago ? `👤 ${clientePago} - ` : ''}${referencia}
+      </td>
+    </tr>
+  `;
+});
       historialPagosHTML += `</tbody></table></div>`;
     }
 

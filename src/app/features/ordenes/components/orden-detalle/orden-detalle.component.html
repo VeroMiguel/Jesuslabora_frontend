@@ -20,51 +20,101 @@
           <div>
             <h2>{{ orden.doctor?.nombre }}</h2>
             
-           <!-- ✅ SECCIÓN DE SERVICIOS CON BOTÓN DE PAGO, HISTORIAL Y CLIENTE -->
+           <!-- SECCIÓN DE SERVICIOS -->
 <div class="servicios-lista">
   <div *ngFor="let detalle of orden.detalles; let i = index" class="servicio-detalle-item">
-    <div class="servicio-info">
-      <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
-      <span class="servicio-cantidad">x{{ detalle.cantidad }}</span>
-      <span class="servicio-precio">{{ detalle.precio_unitario | moneda }}</span>
+    <!-- Fila 1: Info del servicio -->
+    <div class="servicio-row">
+      <div class="servicio-info">
+        <span class="servicio-nombre-detalle">{{ detalle.servicio?.nombre }}</span>
+        <span class="servicio-cantidad">x{{ detalle.cantidad }}</span>
+        <span class="servicio-precio">{{ detalle.precio_unitario | moneda }}</span>
+      </div>
     </div>
     
-    <!-- ✅ CLIENTE DEL SERVICIO CON BOTÓN VER DETALLE (sin detalle visible) -->
-    <div class="servicio-cliente-info">
-      <span class="servicio-cliente">
-        <i class="fas fa-user"></i> {{ getClienteServicio(detalle) }}
-      </span>
-      <!-- ✅ Botón Ver Detalle del Cliente -->
-      <button class="btn-ver-cliente-servicio" 
-              (click)="abrirModalClienteServicio(detalle)"
-              title="Ver información completa del cliente">
-        <i class="fas fa-eye"></i> Ver Detalle
+    <!-- Fila 2: Cliente y botones de acción -->
+    <div class="servicio-actions-row">
+      <div class="servicio-cliente-info">
+        <span class="servicio-cliente">
+          <i class="fas fa-user"></i> {{ getClienteServicio(detalle) }}
+        </span>
+        <button class="btn-copy-cliente" 
+                (click)="copiarTexto(getClienteServicio(detalle))"
+                title="Copiar nombre del cliente">
+          <i class="fas fa-copy"></i>
+        </button>
+        <span class="servicio-codigo" *ngIf="getCodigoPaciente(detalle)">
+          <i class="fas fa-id-card"></i> {{ getCodigoPaciente(detalle) }}
+        </span>
+        <button *ngIf="getCodigoPaciente(detalle)" 
+                class="btn-copy-cliente" 
+                (click)="copiarTexto(getCodigoPaciente(detalle))"
+                title="Copiar código del paciente">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+      
+      <div class="servicio-buttons">
+        <button class="btn-ver-cliente-servicio" 
+                (click)="abrirModalClienteServicio(detalle)"
+                title="Ver información completa del cliente">
+          <i class="fas fa-eye"></i> Ver Detalle
+        </button>
+        <button class="btn-preview-cliente" 
+                (click)="vistaPreviaTicketPorCliente(getClienteServicio(detalle), detalle)"
+                title="Ver ticket solo de este cliente">
+          <i class="fas fa-ticket-alt"></i> Ticket
+        </button>
+        <button class="btn-whatsapp-servicio" 
+                (click)="enviarWhatsAppPorServicio(detalle)"
+                title="Enviar WhatsApp solo de este servicio">
+          <i class="fab fa-whatsapp"></i> WhatsApp
+        </button>
+        <ng-container *ngIf="mostrarBotonPagarServicio(detalle)">
+          <button class="btn-pagar-servicio"
+                  (click)="pagarServicio(detalle, i)"
+                  title="Pagar este servicio">
+            <i class="fas fa-money-bill-wave"></i> Pagar
+          </button>
+        </ng-container>
+        <button class="btn-historial-servicio"
+                (click)="abrirHistorialServicio(detalle)"
+                title="Ver historial de pagos de este servicio">
+          <i class="fas fa-history"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- ✅ NUEVO: Sección de imagen con botón de subir -->
+    <div class="servicio-imagen-section">
+      <div class="servicio-imagen-mini" *ngIf="detalle.imagen_referencia_url">
+        <img 
+          [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-image.png'" 
+          (error)="onImageError($event)"
+          (click)="verImagenServicio(detalle.imagen_referencia_url)"
+          class="servicio-thumbnail"
+          title="Ver imagen de referencia">
+      </div>
+      <button class="btn-subir-imagen-detalle" 
+              (click)="abrirSelectorImagenDetalle(detalle, i)"
+              title="Subir imagen de referencia para este servicio"
+              [disabled]="subiendoImagen">
+        <i class="fas fa-image"></i>
+        {{ detalle.imagen_referencia_url ? 'Cambiar imagen' : 'Subir imagen' }}
       </button>
-    </div>
-    
-    <!-- ✅ BOTÓN DE PAGO POR SERVICIO (solo si hay deuda) -->
-    <button *ngIf="mostrarBotonPagarServicio(detalle)" 
-            class="btn-pagar-servicio"
-            (click)="pagarServicio(detalle, i)"
-            title="Pagar este servicio">
-      <i class="fas fa-money-bill-wave"></i> Pagar
-    </button>
-    
-    <!-- ✅ BOTÓN PARA VER HISTORIAL DE PAGOS DEL SERVICIO -->
-    <button class="btn-historial-servicio"
-            (click)="abrirHistorialServicio(detalle)"
-            title="Ver historial de pagos de este servicio">
-      <i class="fas fa-history"></i>
-    </button>
-    
-    <!-- Imagen del servicio -->
-    <div class="servicio-imagen-mini" *ngIf="detalle.imagen_referencia_url">
-      <img 
-        [src]="detalle.imagen_referencia_url | imagen:'assets/images/default-image.png'" 
-        (error)="onImageError($event)"
-        (click)="verImagenServicio(detalle.imagen_referencia_url)"
-        class="servicio-thumbnail"
-        title="Ver imagen de referencia">
+      <button *ngIf="detalle.imagen_referencia_url" 
+              class="btn-eliminar-imagen-detalle"
+              (click)="eliminarImagenDetalle(detalle, i)"
+              title="Eliminar imagen de referencia">
+        <i class="fas fa-trash"></i>
+      </button>
+      <!-- Input oculto por servicio -->
+      <input 
+        type="file" 
+        #fileInputDetalle 
+        style="display: none" 
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif"
+        (change)="onImagenDetalleSeleccionada($event, i)">
     </div>
   </div>
 </div>
@@ -87,13 +137,18 @@
       <div class="info-grid">
         <div class="info-item">
           <span class="label">Orden #</span>
-          <span class="value">{{ orden.id_externo }}</span>
+          <div class="value-with-copy">
+            <span class="value">{{ orden.id_externo }}</span>
+            <button class="btn-copy" (click)="copiarTexto(orden.id_externo)" title="Copiar número de orden">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
         </div>
         <div class="info-item">
           <span class="label">Fecha Registro</span>
           <span class="value fecha-registro">
             <span class="fecha">{{ orden.fecha_registro | fecha:'dd/MM/yyyy' }}</span>
-            <span class="hora-registro">{{ orden.fecha_registro | fecha:'h:mm a' }}</span>
+            <span class="hora-registro"> {{ orden.fecha_registro | fecha:'h:mm a' }}</span>
           </span>
         </div>
         <div class="info-item">
@@ -136,33 +191,27 @@
         </div>
       </div>
 
-      <!-- ✅ HISTORIAL DE PAGOS - SOLO EL BOTÓN DE AGREGAR PAGO (sin lista de pagos) -->
+      <!-- Historial de Pagos - Botón Agregar Pago -->
       <div class="pagos-section" *ngIf="mostrarBotonAgregarPago()">
         <h3>Historial de Pagos</h3>
-        
-        <!-- ✅ Botón "Agregar Pago" SOLO para clientes diferentes -->
         <button *ngIf="mostrarBotonAgregarPago()" 
                 class="btn-add-pago" 
                 (click)="agregarPago()" 
                 [disabled]="saldo === 0">
           <i class="fas fa-plus"></i> Agregar Pago
         </button>
-        
-        <!-- ✅ Mensaje indicando que los pagos se ven por servicio -->
         <div class="pagos-helper">
           <i class="fas fa-info-circle"></i>
           <span>Los pagos se pueden ver por cada servicio usando el botón <i class="fas fa-history"></i> de cada servicio</span>
         </div>
       </div>
 
-      <!-- ✅ ELIMINADA LA SECCIÓN DE INFORMACIÓN DEL CLIENTE AL FINAL -->
-
-      <!-- Acciones -->
+      <!-- Acciones principales -->
       <div class="acciones">
         <button class="btn-whatsapp" (click)="enviarWhatsApp()">
           <i class="fab fa-whatsapp"></i> Enviar por WhatsApp
         </button>
-        <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa">
+        <button class="btn-preview" (click)="vistaPreviaTicket()" title="Vista previa completa">
           <i class="fas fa-eye"></i> Vista Previa
         </button>
         <button class="btn-edit" [routerLink]="['/ordenes/editar', orden.id]">
@@ -174,7 +223,7 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- ✅ MODAL DE HISTORIAL DE PAGOS POR SERVICIO -->
+<!-- MODAL DE HISTORIAL DE PAGOS POR SERVICIO -->
 <!-- ============================================================ -->
 <div *ngIf="modalHistorialVisible" class="modal-overlay" (click)="cerrarHistorialServicio()">
   <div class="modal-container modal-historial" (click)="$event.stopPropagation()">
@@ -249,7 +298,7 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- ✅ MODAL DE DETALLE DEL CLIENTE (desde el botón al lado del nombre) -->
+<!-- MODAL DE DETALLE DEL CLIENTE -->
 <!-- ============================================================ -->
 <div *ngIf="modalClienteVisible" class="modal-overlay" (click)="cerrarModalCliente()">
   <div class="modal-container modal-cliente" (click)="$event.stopPropagation()">
@@ -300,7 +349,7 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- ✅ MODAL DE VER TODOS LOS PAGOS (para cuando hay muchos) -->
+<!-- MODAL DE VER TODOS LOS PAGOS -->
 <!-- ============================================================ -->
 <div *ngIf="modalTodosPagosVisible" class="modal-overlay" (click)="cerrarTodosPagos()">
   <div class="modal-container modal-historial" (click)="$event.stopPropagation()">

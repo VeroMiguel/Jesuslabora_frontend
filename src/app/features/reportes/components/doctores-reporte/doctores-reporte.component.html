@@ -11,34 +11,6 @@
     </div>
   </div>
 
-  <!-- Tarjetas de resumen -->
-  <div class="resumen-card glass">
-    <div class="resumen-stats">
-      <div class="stat">
-        <span class="label"><i class="fas fa-users"></i> Total Doctores</span>
-        <span class="value">{{ totalDoctores }}</span>
-      </div>
-      <div class="stat">
-        <span class="label"><i class="fas fa-chart-line"></i> Total Facturado</span>
-        <span class="value facturado">{{ totalFacturado | moneda }}</span>
-      </div>
-      <div class="stat">
-        <span class="label"><i class="fas fa-dollar-sign"></i> Total Pagado</span>
-        <span class="value pagado">{{ totalPagado | moneda }}</span>
-      </div>
-      <div class="stat">
-        <span class="label"><i class="fas fa-exclamation-triangle"></i> Deuda Total</span>
-        <span class="value" [ngClass]="{'deuda-positiva': deudaTotal > 0, 'deuda-cero': deudaTotal === 0}">
-          {{ deudaTotal | moneda }}
-        </span>
-      </div>
-      <div class="stat">
-        <span class="label"><i class="fas fa-clock"></i> Órdenes Pendientes</span>
-        <span class="value">{{ totalPendientes }}</span>
-      </div>
-    </div>
-  </div>
-
   <!-- Filtros -->
   <div class="filtros-panel glass">
     <div class="filtros-grid">
@@ -46,21 +18,10 @@
         <label><i class="fas fa-search"></i> Buscar Doctor</label>
         <input type="text" [(ngModel)]="filtroNombre" (input)="aplicarFiltrosFrontend()" placeholder="Nombre del doctor..." class="form-control">
       </div>
+      <!-- ✅ Filtro por Paciente -->
       <div class="filtro-group">
-        <label><i class="fas fa-filter"></i> Estado de Deuda</label>
-        <select [(ngModel)]="filtroDeuda" (change)="aplicarFiltrosFrontend()" class="form-control">
-          <option value="todos">Todos los doctores</option>
-          <option value="conDeuda">Con deuda pendiente</option>
-          <option value="sinDeuda">Sin deuda (pagado)</option>
-        </select>
-      </div>
-      <div class="filtro-group">
-        <label><i class="fas fa-users"></i> Tipo de Cliente</label>
-        <select [(ngModel)]="filtroTipoCliente" (change)="aplicarFiltros()" class="form-control">
-          <option value="todos">Todos</option>
-          <option value="unico">Servicios para un solo paciente</option>
-          <option value="multiple">Cliente diferente por servicio</option>
-        </select>
+        <label><i class="fas fa-user"></i> Buscar Paciente</label>
+        <input type="text" [(ngModel)]="filtroPaciente" (input)="aplicarFiltrosFrontend()" placeholder="Nombre del paciente..." class="form-control">
       </div>
       <div class="filtro-group">
         <label><i class="fas fa-calendar"></i> Mes</label>
@@ -69,6 +30,12 @@
       <div class="filtro-actions">
         <button class="btn-clear" (click)="limpiarFiltros()">
           <i class="fas fa-eraser"></i> Limpiar filtros
+        </button>
+      </div>
+      <!-- ✅ Botón para ver detalle del paciente buscado -->
+      <div *ngIf="filtroPaciente.trim() && doctoresFiltrados.length > 0" class="paciente-buscado-actions">
+        <button class="btn-ver-paciente-buscado" (click)="abrirModalPacienteDesdeBusqueda()">
+          <i class="fas fa-user"></i> Ver detalle de "{{ filtroPaciente }}"
         </button>
       </div>
     </div>
@@ -210,5 +177,86 @@
 
   <div *ngIf="cargando" class="loading-container">
     <app-loading-spinner></app-loading-spinner>
+  </div>
+</div>
+
+<!-- ✅ MODAL DE DETALLE DE PAGOS POR PACIENTE - CORREGIDO -->
+<div *ngIf="modalPacienteVisible" class="modal-overlay" (click)="cerrarModalPaciente()">
+  <div class="modal-container modal-paciente" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <i class="fas fa-user"></i>
+        <h3>Detalle de Pagos - {{ modalPacienteData?.paciente }}</h3>
+      </div>
+      <button class="modal-close" (click)="cerrarModalPaciente()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="modalPacienteData">
+      <!-- Resumen -->
+      <div class="modal-paciente-resumen">
+        <div class="modal-paciente-resumen-item">
+          <span>Paciente</span>
+          <strong>{{ modalPacienteData.paciente }}</strong>
+        </div>
+        <div class="modal-paciente-resumen-item">
+          <span>Total Facturado</span>
+          <strong class="facturado">{{ modalPacienteData.totalFacturado | moneda }}</strong>
+        </div>
+        <div class="modal-paciente-resumen-item">
+          <span>Total Pagado</span>
+          <strong class="pagado">{{ modalPacienteData.totalPagado | moneda }}</strong>
+        </div>
+        <div class="modal-paciente-resumen-item">
+          <span>Saldo</span>
+          <strong [ngClass]="{'deuda-positiva': modalPacienteData.saldo > 0, 'deuda-cero': modalPacienteData.saldo === 0}">
+            {{ modalPacienteData.saldo | moneda }}
+          </strong>
+        </div>
+      </div>
+      
+      <!-- ✅ Órdenes del paciente con nombres de servicios y doctor -->
+      <div class="modal-paciente-ordenes" *ngIf="modalPacienteData.ordenes.length > 0">
+        <h4>Órdenes del Paciente</h4>
+        <div *ngFor="let orden of modalPacienteData.ordenes" class="modal-paciente-orden-item">
+          <div class="modal-paciente-orden-header">
+            <span class="orden-id">{{ orden.id_externo }}</span>
+            <span class="orden-doctor" *ngIf="orden.doctorNombre">
+              <i class="fas fa-user-md"></i> {{ orden.doctorNombre }}
+            </span>
+            <span class="orden-estado" [ngClass]="'estado-' + orden.estado">{{ orden.estado }}</span>
+          </div>
+          <div class="modal-paciente-orden-servicios">
+            <div *ngFor="let det of (orden.detallesConNombres || orden.detalles)" class="modal-paciente-servicio-item">
+              <span class="servicio-nombre">{{ det.nombre || det.servicio?.nombre || 'Sin nombre' }}</span>
+              <span class="servicio-precio">{{ (det.precio || det.precio_unitario) | moneda }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ✅ Historial de Pagos con servicio asociado -->
+      <div class="modal-paciente-pagos" *ngIf="modalPacienteData.pagos && modalPacienteData.pagos.length > 0">
+        <h4>Historial de Pagos</h4>
+        <div *ngFor="let pago of modalPacienteData.pagos" class="modal-paciente-pago-item">
+          <div class="modal-paciente-pago-info">
+            <span class="pago-fecha">{{ pago.fecha | fecha:'dd/MM/yyyy h:mm a' }}</span>
+            <span class="pago-monto">{{ pago.monto | moneda }}</span>
+            <span class="pago-metodo">{{ pago.metodo | titlecase }}</span>
+          </div>
+          <div class="modal-paciente-pago-detalle" *ngIf="pago.orden || pago.servicio">
+            <span *ngIf="pago.orden">Orden: {{ pago.orden }}</span>
+            <span *ngIf="pago.servicio && pago.servicio !== 'N/A'">Servicio: {{ pago.servicio }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ✅ Mensaje cuando no hay pagos -->
+      <div *ngIf="(!modalPacienteData.pagos || modalPacienteData.pagos.length === 0) && modalPacienteData.ordenes.length > 0" class="modal-no-pagos">
+        <i class="fas fa-inbox"></i>
+        <p>No hay pagos registrados para este paciente</p>
+      </div>
+    </div>
   </div>
 </div>

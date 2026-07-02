@@ -16,6 +16,7 @@ export interface DetalleServicio {
   fecha_limite: string;
   hora_limite: string;
   cliente_nombre?: string;
+  cliente_codigo?: string;  // ✅ NUEVO: Código de paciente
   detalle_cliente?: string;
   imagen_url?: string;
   imagen_nombre?: string;

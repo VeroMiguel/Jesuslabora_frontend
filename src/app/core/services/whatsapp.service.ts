@@ -109,82 +109,83 @@ Saludos cordiales.`;
   /**
    * ✅ Genera mensaje de orden usando detalles_orden
    */
-  private generarMensajeOrden(orden: any): string {
-    const totalPagado = orden.pagos?.reduce((sum: number, p: any) => sum + Number(p.monto), 0) || 0;
-    const saldo = Number(orden.total) - totalPagado;
-    const detalles = orden.detalles || [];
+// whatsapp.service.ts - REEMPLAZAR COMPLETAMENTE generarMensajeOrden
 
-    // ✅ Obtener servicios, clientes y fechas límite desde detalles
-    let serviciosTexto = '';
-    let clientesTexto = '';
-    let fechasLimiteTexto = '';
+private generarMensajeOrden(orden: any): string {
+  const totalPagado = orden.pagos?.reduce((sum: number, p: any) => sum + Number(p.monto), 0) || 0;
+  const saldo = Number(orden.total) - totalPagado;
+  const detalles = orden.detalles || [];
 
-    if (detalles.length > 0) {
-      // ✅ Servicios con precios y clientes
-      const serviciosLista = detalles.map((d: any, i: number) => {
-        const nombre = d.servicio?.nombre || 'Sin servicio';
-        const precio = this.monedaPipe.transform(d.precio_unitario);
-        const cantidad = d.cantidad || 1;
-        const cliente = d.cliente_nombre || orden.cliente_nombre || 'No especificado';
-        return `   ${i + 1}. ${nombre} x${cantidad} = ${precio} (${cliente})`;
-      }).join('\n');
-      serviciosTexto = `\n📋 *SERVICIOS*\n${serviciosLista}`;
+  // ✅ Si la orden ya tiene cliente_nombre, usarlo (para cliente único)
+  let clienteGlobal = orden.cliente_nombre;
 
-      // ✅ Clientes únicos
-      const clientesUnicos = [...new Set(detalles.map((d: any) => d.cliente_nombre || orden.cliente_nombre || 'No especificado'))];
-      clientesTexto = clientesUnicos.join(', ');
+  // ✅ Si solo hay un detalle, usar su cliente
+  if (detalles.length === 1 && !clienteGlobal) {
+    clienteGlobal = detalles[0].cliente_nombre;
+  }
 
-      // ✅ Fechas límite por servicio
-      const fechasLista = detalles.map((d: any) => {
-        const fecha = d.fecha_limite ? new Date(d.fecha_limite).toLocaleDateString('es-PE') : 'Sin fecha';
-        const hora = d.hora_limite ? this.formatearHora(d.hora_limite) : '';
-        const nombre = d.servicio?.nombre || 'Sin servicio';
-        return `   • ${nombre}: ${fecha} ${hora}`;
-      }).join('\n');
-      fechasLimiteTexto = `\n⏰ *FECHAS LÍMITE*\n${fechasLista}`;
-    } else {
-      // Fallback a datos de la orden principal (legacy)
-      const servicio = orden.servicio?.nombre || 'No especificado';
-      const cliente = orden.cliente_nombre || 'No especificado';
-      serviciosTexto = `\n📋 *SERVICIO*\n   ${servicio}`;
-      clientesTexto = cliente;
-      
-      const fechaLimite = orden.fecha_limite ? new Date(orden.fecha_limite).toLocaleDateString('es-PE') : 'Sin fecha';
-      const hora = orden.hora_limite ? this.formatearHora(orden.hora_limite) : '';
-      fechasLimiteTexto = `\n⏰ *FECHA LÍMITE*\n   ${fechaLimite} ${hora}`;
-    }
+  // ✅ Construir servicios
+  let serviciosTexto = '';
+  let fechasLimiteTexto = '';
 
-    // ✅ Generar historial de pagos con referencias
-    let historialPagos = '';
-    if (orden.pagos && orden.pagos.length > 0) {
-      const pagosOrdenados = [...orden.pagos].sort((a, b) => 
-        new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime()
-      );
-      
-      historialPagos = '\n\n📆 *HISTORIAL DE PAGOS*\n';
-      historialPagos += '━━━━━━━━━━━━━━━━━━\n';
-      
-      pagosOrdenados.forEach((pago: any, index: number) => {
-        const fecha = new Date(pago.creado_en).toLocaleString('es-PE', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        historialPagos += `${index + 1}. ${fecha}\n`;
-        historialPagos += `   💰 ${this.monedaPipe.transform(pago.monto)} - ${pago.metodo_pago}\n`;
-        if (pago.referencia) {
-          historialPagos += `   📝 Ref: ${pago.referencia}\n`;
-        }
+  if (detalles.length > 0) {
+    const serviciosLista = detalles.map((d: any, i: number) => {
+      const nombre = d.servicio?.nombre || 'Sin servicio';
+      const precio = this.monedaPipe.transform(d.precio_unitario);
+      const cantidad = d.cantidad || 1;
+      const cliente = d.cliente_nombre || orden.cliente_nombre || 'No especificado';
+      return `   ${i + 1}. ${nombre} x${cantidad} = ${precio} (${cliente})`;
+    }).join('\n');
+    serviciosTexto = `\n📋 *SERVICIOS*\n${serviciosLista}`;
+
+    // ✅ Fechas límite - USAR formatearFecha CORRECTAMENTE
+    const fechasLista = detalles.map((d: any) => {
+      const fecha = d.fecha_limite ? this.formatearFecha(d.fecha_limite) : 'Sin fecha';
+      const hora = d.hora_limite ? this.formatearHora(d.hora_limite) : '';
+      const nombre = d.servicio?.nombre || 'Sin servicio';
+      return `   • ${nombre}: ${fecha} ${hora}`;
+    }).join('\n');
+    fechasLimiteTexto = `\n⏰ *FECHAS LÍMITE*\n${fechasLista}`;
+  }
+
+  // ✅ Clientes (usar el cliente global si existe)
+  let clientesTexto = clienteGlobal || 'No especificado';
+  if (!clienteGlobal && detalles.length > 0) {
+    const clientesUnicos = [...new Set(detalles.map((d: any) => d.cliente_nombre || 'No especificado'))];
+    clientesTexto = clientesUnicos.join(', ');
+  }
+
+  // ✅ Historial de pagos
+  let historialPagos = '';
+  if (orden.pagos && orden.pagos.length > 0) {
+    const pagosOrdenados = [...orden.pagos].sort((a, b) => 
+      new Date(b.creado_en).getTime() - new Date(a.creado_en).getTime()
+    );
+    
+    historialPagos = '\n\n📆 *HISTORIAL DE PAGOS*\n';
+    historialPagos += '━━━━━━━━━━━━━━━━━━\n';
+    
+    pagosOrdenados.forEach((pago: any, index: number) => {
+      const fecha = new Date(pago.creado_en).toLocaleString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       });
       
-      historialPagos += '━━━━━━━━━━━━━━━━━━';
-    }
+      historialPagos += `${index + 1}. ${fecha}\n`;
+      historialPagos += `   💰 ${this.monedaPipe.transform(pago.monto)} - ${pago.metodo_pago}\n`;
+      if (pago.referencia) {
+        historialPagos += `   📝 Ref: ${pago.referencia}\n`;
+      }
+    });
+    
+    historialPagos += '━━━━━━━━━━━━━━━━━━';
+  }
 
-    // ✅ Construir el mensaje completo
-    return `Hola Dr(a). ${orden.doctor?.nombre}, le comparto el estado de su trabajo:
+  // ✅ Construir mensaje final
+  return `Hola Dr(a). ${orden.doctor?.nombre}, le comparto el estado de su trabajo:
 
 📋 *DETALLE DE LA ORDEN #${orden.id_externo}*
 ━━━━━━━━━━━━━━━━━━
@@ -197,7 +198,41 @@ ${fechasLimiteTexto}
 ━━━━━━━━━━━━━━━━━━${historialPagos}
 
 Gracias por su preferencia.`;
+}
+
+/**
+ * ✅ Formatea fecha correctamente (sin offset de zona horaria)
+ */
+private formatearFecha(value: string | Date): string {
+  if (!value) return '';
+  
+  // Detectar si es fecha pura (YYYY-MM-DD)
+  const esFechaPura = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  
+  let fecha: Date;
+  let usarUTC = false;
+  
+  if (esFechaPura) {
+    const [year, month, day] = value.split('-').map(Number);
+    fecha = new Date(Date.UTC(year, month - 1, day));
+    usarUTC = true;
+  } else {
+    fecha = new Date(value);
+    usarUTC = false;
   }
+  
+  if (isNaN(fecha.getTime())) return '';
+  
+  const getDia = () => usarUTC ? fecha.getUTCDate() : fecha.getDate();
+  const getMes = () => usarUTC ? fecha.getUTCMonth() + 1 : fecha.getMonth() + 1;
+  const getAño = () => usarUTC ? fecha.getUTCFullYear() : fecha.getFullYear();
+  
+  const dia = getDia().toString().padStart(2, '0');
+  const mes = getMes().toString().padStart(2, '0');
+  const año = getAño();
+  
+  return `${dia}/${mes}/${año}`;
+}
 
   private formatearHora(hora: string): string {
     if (!hora) return '';

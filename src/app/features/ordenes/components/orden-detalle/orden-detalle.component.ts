@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ViewChildren, ElementRef, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -51,17 +51,16 @@ export class OrdenDetalleComponent implements OnInit, OnDestroy {
   
   // ✅ Propiedades para el modal de "Ver todos los pagos"
   modalTodosPagosVisible: boolean = false;
-  // ============================================================
-  // ✅ PROPIEDADES PARA MODAL DE CLIENTE POR SERVICIO
-  // ============================================================
-
+  
+  // ✅ Propiedades para modal de cliente por servicio
   modalClienteVisible: boolean = false;
   modalClienteData: any = null;
-// ✅ NUEVA: Guardar referencia al detalle que se está editando
-modalClienteDetalleRef: any = null;
-  
+  modalClienteDetalleRef: any = null;
+    // ✅ Propiedad para almacenar el índice del detalle que está subiendo imagen
+  detalleSubiendoImagen: number | null = null;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
-
+// ✅ Array de ViewChildren para los inputs de archivo por detalle
+@ViewChildren('fileInputDetalle') fileInputsDetalle!: QueryList<ElementRef<HTMLInputElement>>;
   constructor(
     private route: ActivatedRoute,
     private ordenService: OrdenService,
@@ -294,25 +293,8 @@ modalClienteDetalleRef: any = null;
     
     const precioServicio = parseFloat(detalle.precio_unitario) || 0;
     
-    const pagosDelServicio = this.orden.pagos?.filter((pago: any) => {
-      if (pago.observaciones) {
-        try {
-          const obs = typeof pago.observaciones === 'string' 
-            ? JSON.parse(pago.observaciones) 
-            : pago.observaciones;
-          if (obs.detalle_id === detalle.id) {
-            return true;
-          }
-        } catch {
-          // Ignorar
-        }
-      }
-      if (pago.referencia && pago.referencia.includes(detalle.servicio?.nombre)) {
-        return true;
-      }
-      return false;
-    }) || [];
-    
+    // ✅ Usar getPagosPorServicio para consistencia
+    const pagosDelServicio = this.getPagosPorServicio(detalle);
     const totalPagadoServicio = pagosDelServicio.reduce((sum: number, p: any) => sum + Number(p.monto), 0);
     const saldoPendiente = precioServicio - totalPagadoServicio;
     
@@ -351,40 +333,67 @@ modalClienteDetalleRef: any = null;
 
   /**
    * ✅ Obtiene los pagos filtrados por un servicio específico
+   * ✅ CORREGIDO: Filtra estrictamente por detalle_id
    */
   getPagosPorServicio(detalle: any): any[] {
     if (!this.orden?.pagos) return [];
     
-    return this.orden.pagos.filter((pago: any) => {
-      // Buscar por detalle_id en observaciones
+    const pagosFiltrados: any[] = [];
+    const detalleId = detalle.id;
+    const servicioNombre = detalle.servicio?.nombre || '';
+    
+    console.log('📊 getPagosPorServicio - Buscando pagos para detalle ID:', detalleId);
+    
+    for (const pago of this.orden.pagos) {
+      let detalleIdEncontrado = null;
+      let servicioEncontrado = null;
+      
       if (pago.observaciones) {
         try {
-          const obs = typeof pago.observaciones === 'string' 
-            ? JSON.parse(pago.observaciones) 
-            : pago.observaciones;
-          if (obs.detalle_id === detalle.id) {
-            return true;
+          let obs = pago.observaciones;
+          if (typeof obs === 'string') {
+            obs = JSON.parse(obs);
           }
-        } catch {
-          // Ignorar
-        }
+          detalleIdEncontrado = obs.detalle_id || null;
+          servicioEncontrado = obs.servicio || null;
+        } catch {}
       }
-      // Buscar por nombre del servicio en referencia
-      if (pago.referencia && pago.referencia.includes(detalle.servicio?.nombre)) {
-        return true;
+      
+      // ✅ SOLO incluir si el detalle_id coincide EXACTAMENTE
+      if (detalleIdEncontrado !== null && detalleIdEncontrado === detalleId) {
+        console.log('✅ Pago encontrado por detalle_id:', pago.id);
+        pagosFiltrados.push(pago);
       }
-      return false;
-    });
+      // 🔍 Fallback: si no tiene detalle_id, usar servicio
+      else if (detalleIdEncontrado === null && servicioEncontrado === servicioNombre) {
+        console.log('⚠️ Pago encontrado por servicio (fallback):', pago.id);
+        pagosFiltrados.push(pago);
+      }
+    }
+    
+    console.log('📊 getPagosPorServicio - Pagos encontrados:', pagosFiltrados.length);
+    return pagosFiltrados;
   }
 
   /**
    * ✅ Abre el modal de historial de pagos por servicio
    */
   abrirHistorialServicio(detalle: any) {
+    // ✅ Usar getPagosPorServicio (ya corregido)
     const pagos = this.getPagosPorServicio(detalle);
     const totalPagado = pagos.reduce((sum, p) => sum + Number(p.monto), 0);
     const precioServicio = parseFloat(detalle.precio_unitario) || 0;
     const saldo = precioServicio - totalPagado;
+    
+    console.log('📊 === HISTORIAL POR SERVICIO ===');
+    console.log('📌 Servicio:', detalle.servicio?.nombre);
+    console.log('📌 Detalle ID:', detalle.id);
+    console.log('📌 Pagos encontrados:', pagos.length);
+    pagos.forEach((p: any) => {
+      console.log('  - Monto:', p.monto, '| Ref:', p.referencia);
+    });
+    console.log('📊 Total pagado:', totalPagado);
+    console.log('📊 === FIN ===');
     
     this.modalHistorialServicio = detalle;
     this.modalHistorialPagos = pagos;
@@ -436,6 +445,9 @@ modalClienteDetalleRef: any = null;
           <p style="margin: 4px 0; color: ${montoMaximo > 0 ? '#f43f5e' : '#10b981'}; font-weight: 700;">
             <strong>💳 Saldo pendiente:</strong> ${this.monedaPipe.transform(montoMaximo)}
           </p>
+          <p style="margin: 4px 0; font-size: 0.8rem; color: #64748b;">
+            <strong>📌 Detalle ID:</strong> ${detalle.id}
+          </p>
         </div>
         <input type="number" id="monto" class="swal2-input" 
                placeholder="Monto (S/)" step="0.01" min="0.01" 
@@ -477,10 +489,11 @@ modalClienteDetalleRef: any = null;
           return false;
         }
         
+        // ✅ Asegurar que el detalle_id se incluya correctamente
         return { 
           monto: montoNumerico, 
           metodo_pago: metodo, 
-          referencia,
+          referencia: referencia || `Pago para ${servicioNombre}`,
           detalleId: detalle.id,
           servicioNombre: servicioNombre,
           cliente: cliente
@@ -488,6 +501,7 @@ modalClienteDetalleRef: any = null;
       }
     }).then((result) => {
       if (result.isConfirmed) {
+        console.log('📝 Datos del pago a registrar:', result.value);
         this.registrarPagoConDetalle(result.value);
       }
     });
@@ -982,188 +996,626 @@ modalClienteDetalleRef: any = null;
     });
     console.log('🧹 OrdenDetalleComponent destruido');
   }
-/**
- * ✅ Abre el modal de detalle del cliente desde el servicio
- */
-abrirModalClienteServicio(detalle: any) {
-  const clienteNombre = this.getClienteServicio(detalle);
-  
-  // ✅ Obtener el detalle del caso (puede venir del detalle o de la orden)
-  let detalleCaso = null;
-  
-  // Primero buscar en el detalle específico
-  if (detalle.detalle_cliente) {
-    detalleCaso = detalle.detalle_cliente;
-  } 
-  // Si no, buscar en la orden (para cliente único)
-  else if (this.orden.detalle_cliente) {
-    detalleCaso = this.orden.detalle_cliente;
-  }
-  
-  // Obtener todos los servicios de este cliente
-  let serviciosDelCliente = [];
-  
-  if (this.tieneClienteUnico()) {
-    // Si es cliente único, mostrar todos los servicios
-    serviciosDelCliente = this.orden.detalles.map((d: any) => ({
-      nombre: d.servicio?.nombre || 'Sin servicio',
-      precio: d.precio_unitario
-    }));
-  } else {
-    // Si son clientes diferentes, mostrar solo los servicios de este cliente
-    serviciosDelCliente = this.orden.detalles
-      .filter((d: any) => d.cliente_nombre === clienteNombre)
-      .map((d: any) => ({
+
+  // ============================================================
+  // ✅ MÉTODOS DE CLIENTE
+  // ============================================================
+
+  /**
+   * ✅ Abre el modal de detalle del cliente desde el servicio
+   */
+  abrirModalClienteServicio(detalle: any) {
+    const clienteNombre = this.getClienteServicio(detalle);
+    
+    let detalleCaso = null;
+    
+    if (detalle.detalle_cliente) {
+      detalleCaso = detalle.detalle_cliente;
+    } else if (this.orden.detalle_cliente) {
+      detalleCaso = this.orden.detalle_cliente;
+    }
+    
+    let serviciosDelCliente = [];
+    
+    if (this.tieneClienteUnico()) {
+      serviciosDelCliente = this.orden.detalles.map((d: any) => ({
         nombre: d.servicio?.nombre || 'Sin servicio',
         precio: d.precio_unitario
       }));
+    } else {
+      serviciosDelCliente = this.orden.detalles
+        .filter((d: any) => d.cliente_nombre === clienteNombre)
+        .map((d: any) => ({
+          nombre: d.servicio?.nombre || 'Sin servicio',
+          precio: d.precio_unitario
+        }));
+    }
+    
+    this.modalClienteData = {
+      nombre: clienteNombre,
+      detalle: detalleCaso,
+      servicios: serviciosDelCliente,
+      detalleRef: detalle,
+      esClienteUnico: this.tieneClienteUnico()
+    };
+    
+    this.modalClienteDetalleRef = detalle;
+    this.modalClienteVisible = true;
   }
-  
-  // ✅ Guardar los datos completos del cliente
-  this.modalClienteData = {
-    nombre: clienteNombre,
-    detalle: detalleCaso,
-    servicios: serviciosDelCliente,
-    detalleRef: detalle,
-    esClienteUnico: this.tieneClienteUnico()
-  };
-  
-  // ✅ Guardar la referencia del detalle
-  this.modalClienteDetalleRef = detalle;
-  
-  this.modalClienteVisible = true;
-}
 
-/**
- * ✅ Cierra el modal de cliente
- */
-cerrarModalCliente() {
-  this.modalClienteVisible = false;
-  this.modalClienteData = null;
-  this.modalClienteDetalleRef = null;
-}
+  /**
+   * ✅ Cierra el modal de cliente
+   */
+  cerrarModalCliente() {
+    this.modalClienteVisible = false;
+    this.modalClienteData = null;
+    this.modalClienteDetalleRef = null;
+  }
 
-/**
- * ✅ Abre el editor de cliente desde el modal
- * ✅ AHORA FUNCIONA PARA CLIENTE ÚNICO Y CLIENTES DIFERENTES
- */
-editarDetalleClienteDesdeModal() {
-  // ✅ Obtener el detalle que se está editando ANTES de cerrar el modal
-  const detalle = this.modalClienteDetalleRef;
-  
-  // ✅ Guardar los datos del cliente antes de cerrar
-  let clienteNombre = '';
-  let detalleCaso = '';
-  
-  if (detalle) {
-    // Si hay un detalle, usar sus datos
-    clienteNombre = detalle.cliente_nombre || '';
-    detalleCaso = detalle.detalle_cliente || '';
-  } else if (this.orden.cliente_nombre) {
-    // Si no hay detalle pero la orden tiene cliente, usar los de la orden
-    clienteNombre = this.orden.cliente_nombre || '';
-    detalleCaso = this.orden.detalle_cliente || '';
+  /**
+   * ✅ Abre el editor de cliente desde el modal
+   */
+  editarDetalleClienteDesdeModal() {
+    const detalle = this.modalClienteDetalleRef;
+    
+    let clienteNombre = '';
+    let detalleCaso = '';
+    
+    if (detalle) {
+      clienteNombre = detalle.cliente_nombre || '';
+      detalleCaso = detalle.detalle_cliente || '';
+    } else if (this.orden.cliente_nombre) {
+      clienteNombre = this.orden.cliente_nombre || '';
+      detalleCaso = this.orden.detalle_cliente || '';
+    }
+    
+    this.cerrarModalCliente();
+    
+    const esClienteUnico = this.tieneClienteUnico();
+    
+    if (esClienteUnico) {
+      this.editarDetalleCliente();
+    } else if (detalle) {
+      this.editarDetalleClientePorServicio(detalle, clienteNombre, detalleCaso);
+    } else {
+      this.editarDetalleCliente();
+    }
   }
-  
-  // ✅ Cerrar el modal de información del cliente
-  this.cerrarModalCliente();
-  
-  // ✅ Verificar si es cliente único o múltiple
-  const esClienteUnico = this.tieneClienteUnico();
-  
-  if (esClienteUnico) {
-    // ✅ Si es cliente único, usar el método existente (edita la orden)
-    this.editarDetalleCliente();
-  } else if (detalle) {
-    // ✅ Si es cliente diferente por servicio, editar el detalle específico
-    // ✅ PASAR EL DETALLE CON LOS DATOS ACTUALES
-    this.editarDetalleClientePorServicio(detalle, clienteNombre, detalleCaso);
-  } else {
-    // Fallback: usar el método general
-    this.editarDetalleCliente();
-  }
-}
-/**
- * ✅ Edita el cliente y detalle de un servicio específico (para clientes diferentes)
- * ✅ MODIFICADO: recibe los datos directamente para evitar que se pierdan
- */
-editarDetalleClientePorServicio(detalle: any, clienteNombre?: string, detalleCaso?: string) {
-  // ✅ Usar los valores pasados o los del detalle
-  const nombreCliente = clienteNombre !== undefined ? clienteNombre : (detalle.cliente_nombre || '');
-  const detalleCliente = detalleCaso !== undefined ? detalleCaso : (detalle.detalle_cliente || '');
-  
-  Swal.fire({
-    title: 'Editar Detalle del Cliente',
-    html: `
-      <div style="text-align: left;">
-        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
-        <input id="cliente-nombre-modal" class="swal2-input" 
-               value="${nombreCliente}" 
-               placeholder="Nombre del paciente"
-               style="margin-bottom: 16px;">
-        
-        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
-        <textarea id="detalle-cliente-modal" class="swal2-textarea" 
-                  rows="5" 
-                  placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${detalleCliente}</textarea>
-        
-        <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
-          <i class="fas fa-info-circle"></i> Incluya información relevante como:
-          pieza dental, lado (superior/inferior), materiales especiales, alergias, etc.
+
+  /**
+   * ✅ Edita el cliente y detalle de un servicio específico
+   */
+  editarDetalleClientePorServicio(detalle: any, clienteNombre?: string, detalleCaso?: string) {
+    const nombreCliente = clienteNombre !== undefined ? clienteNombre : (detalle.cliente_nombre || '');
+    const detalleCliente = detalleCaso !== undefined ? detalleCaso : (detalle.detalle_cliente || '');
+    
+    Swal.fire({
+      title: 'Editar Detalle del Cliente',
+      html: `
+        <div style="text-align: left;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600;">Cliente:</label>
+          <input id="cliente-nombre-modal" class="swal2-input" 
+                 value="${nombreCliente}" 
+                 placeholder="Nombre del paciente"
+                 style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px; font-weight: 600;">Detalle del Caso:</label>
+          <textarea id="detalle-cliente-modal" class="swal2-textarea" 
+                    rows="5" 
+                    placeholder="Ej: Diente #16, necesita corona, paciente alérgico...">${detalleCliente}</textarea>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">
+            <i class="fas fa-info-circle"></i> Incluya información relevante
+          </div>
         </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: 'Guardar cambios',
-    cancelButtonText: 'Cancelar',
-    preConfirm: () => {
-      const nombre = (document.getElementById('cliente-nombre-modal') as HTMLInputElement).value;
-      const detalleTexto = (document.getElementById('detalle-cliente-modal') as HTMLTextAreaElement).value;
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const nombre = (document.getElementById('cliente-nombre-modal') as HTMLInputElement).value;
+        const detalleTexto = (document.getElementById('detalle-cliente-modal') as HTMLTextAreaElement).value;
+        if (!nombre.trim()) {
+          Swal.showValidationMessage('El nombre del cliente es requerido');
+          return false;
+        }
+        return { cliente_nombre: nombre, detalle_cliente: detalleTexto };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.subscriptions.push(
+          this.ordenService.actualizarDetalleOrden(detalle.id, {
+            cliente_nombre: result.value.cliente_nombre,
+            detalle_cliente: result.value.detalle_cliente
+          }).subscribe({
+            next: () => {
+              detalle.cliente_nombre = result.value.cliente_nombre;
+              detalle.detalle_cliente = result.value.detalle_cliente;
+              if (this.modalClienteData) {
+                this.modalClienteData.nombre = result.value.cliente_nombre;
+                this.modalClienteData.detalle = result.value.detalle_cliente;
+              }
+              Swal.fire({
+                icon: 'success',
+                title: 'Actualizado',
+                timer: 1500,
+                showConfirmButton: false
+              });
+              this.cargarOrden(this.orden.id);
+            },
+            error: (error) => {
+              console.error('Error actualizando cliente del servicio:', error);
+              Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+            }
+          })
+        );
+      }
+    });
+  }
+
+  /**
+   * ✅ Copia texto al portapapeles
+   */
+  copiarTexto(texto: string) {
+    if (!texto) return;
+    
+    navigator.clipboard.writeText(texto).then(() => {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Copiado!',
+        text: `"${texto}" copiado al portapapeles`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    }).catch(() => {
+      const textarea = document.createElement('textarea');
+      textarea.value = texto;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      Swal.fire({
+        icon: 'success',
+        title: '¡Copiado!',
+        text: `"${texto}" copiado al portapapeles`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+    });
+  }
+
+  /**
+   * ✅ Obtiene el código de paciente para un servicio
+   */
+  getCodigoPaciente(detalle: any): string {
+    if (this.orden.cliente_codigo) return this.orden.cliente_codigo;
+    return detalle.cliente_codigo || '';
+  }
+
+  // ============================================================
+  // ✅ MÉTODOS DE TICKET POR CLIENTE
+  // ============================================================
+
+  /**
+   * ✅ Abre vista previa del ticket filtrado por un servicio específico
+   */
+  vistaPreviaTicketPorCliente(clienteNombre: string, detalle?: any) {
+    if (!detalle) {
+      const ordenFiltrada = this.filtrarOrdenPorCliente(clienteNombre);
+      this.ticketService.abrirVistaPrevia(ordenFiltrada);
+      return;
+    }
+    
+    // ✅ Siempre usar filtrarOrdenPorServicio
+    const ordenFiltrada = this.filtrarOrdenPorServicio(detalle);
+    this.ticketService.abrirVistaPrevia(ordenFiltrada);
+  }
+
+  /**
+   * ✅ Filtra la orden para mostrar solo los servicios de un cliente
+   */
+  filtrarOrdenPorCliente(clienteNombre: string): any {
+    const esClienteUnico = this.tieneClienteUnico();
+    
+    let detallesFiltrados: any[] = [];
+    
+    if (esClienteUnico) {
+      detallesFiltrados = this.orden.detalles.map((d: any) => ({
+        ...d,
+        cliente_nombre: clienteNombre
+      }));
+    } else {
+      detallesFiltrados = this.orden.detalles.filter((d: any) => {
+        const clienteDetalle = d.cliente_nombre || this.orden.cliente_nombre;
+        return clienteDetalle === clienteNombre;
+      });
+    }
+    
+    if (detallesFiltrados.length === 0) {
+      return this.orden;
+    }
+    
+    const detallesIds = detallesFiltrados.map((d: any) => d.id);
+    const detallesNombres = detallesFiltrados.map((d: any) => d.servicio?.nombre || '');
+    
+    const pagosFiltrados = this.orden.pagos?.filter((pago: any) => {
+      try {
+        if (pago.observaciones) {
+          const obs = typeof pago.observaciones === 'string' 
+            ? JSON.parse(pago.observaciones) 
+            : pago.observaciones;
+          if (obs.detalle_id && detallesIds.includes(obs.detalle_id)) {
+            return true;
+          }
+          if (obs.cliente === clienteNombre) {
+            return true;
+          }
+          if (obs.servicio && detallesNombres.includes(obs.servicio)) {
+            return true;
+          }
+        }
+      } catch {}
       
-      if (!nombre.trim()) {
-        Swal.showValidationMessage('El nombre del cliente es requerido');
-        return false;
+      if (pago.referencia) {
+        if (pago.referencia.includes(clienteNombre)) {
+          return true;
+        }
+        for (const nombre of detallesNombres) {
+          if (pago.referencia.includes(nombre)) {
+            return true;
+          }
+        }
       }
       
-      return { cliente_nombre: nombre, detalle_cliente: detalleTexto };
+      return false;
+    }) || [];
+    
+    const totalFiltrado = detallesFiltrados.reduce((sum: number, d: any) => 
+      sum + (parseFloat(d.precio_unitario) || 0), 0
+    );
+    
+    const totalPagadoFiltrado = pagosFiltrados.reduce((sum: number, p: any) => 
+      sum + (parseFloat(p.monto) || 0), 0
+    );
+    
+    return {
+      ...this.orden,
+      detalles: detallesFiltrados,
+      pagos: pagosFiltrados,
+      total: totalFiltrado,
+      totalPagado: totalPagadoFiltrado,
+      cliente_nombre: clienteNombre,
+      doctor: this.orden.doctor
+    };
+  }
+
+  /**
+   * ✅ Obtiene los clientes únicos de la orden
+   */
+  getClientesUnicos(): string[] {
+    if (this.orden.cliente_nombre) {
+      return [this.orden.cliente_nombre];
     }
+    
+    const clientes: string[] = this.orden.detalles
+      .map((d: any) => d.cliente_nombre)
+      .filter((c: string) => c && c.trim() !== '');
+    
+    if (clientes.length === 0 && this.orden.cliente_nombre) {
+      return [this.orden.cliente_nombre];
+    }
+    
+    return Array.from(new Set(clientes));
+  }
+
+  // ============================================================
+  // ✅ MÉTODO PARA ENVIAR WHATSAPP POR SERVICIO
+  // ============================================================
+
+  /**
+   * ✅ Envía mensaje de WhatsApp filtrado por un servicio específico
+   */
+  enviarWhatsAppPorServicio(detalle: any) {
+    const ordenFiltrada = this.filtrarOrdenPorServicio(detalle);
+    
+    console.log('📱 === WHATSAPP POR SERVICIO ===');
+    console.log('📌 Servicio:', detalle.servicio?.nombre);
+    console.log('📌 Total:', ordenFiltrada.total);
+    console.log('📌 Pagado:', ordenFiltrada.totalPagado);
+    console.log('📌 Pagos:', ordenFiltrada.pagos?.length || 0);
+    console.log('📱 === FIN ===');
+    
+    this.whatsAppService.enviarMensajePersonalizado({
+      telefono: this.orden?.doctor?.telefono_whatsapp,
+      nombre: this.orden?.doctor?.nombre,
+      tipo: 'orden',
+      datos: ordenFiltrada
+    });
+  }
+
+  // ============================================================
+  // ✅ MÉTODO FILTRAR ORDEN POR SERVICIO - CORREGIDO
+  // ============================================================
+
+  /**
+   * ✅ Filtra la orden para mostrar solo un servicio específico
+   * ✅ CORREGIDO: Filtra pagos por detalle_id de forma estricta
+   */
+  filtrarOrdenPorServicio(detalle: any): any {
+    console.log('🔍 === INICIO filtrarOrdenPorServicio ===');
+    console.log('📌 Detalle ID del servicio:', detalle.id);
+    console.log('📌 Servicio:', detalle.servicio?.nombre);
+    console.log('📌 Cliente:', this.getClienteServicio(detalle));
+    console.log('📌 Total pagos en orden:', this.orden.pagos?.length || 0);
+    
+    // ✅ Obtener solo el detalle específico
+    const detalleFiltrado = this.orden.detalles.filter((d: any) => d.id === detalle.id);
+    
+    if (detalleFiltrado.length === 0) {
+      return this.orden;
+    }
+    
+    const precioUnitario = parseFloat(detalle.precio_unitario) || 0;
+    const clienteNombre = this.getClienteServicio(detalle);
+    
+    // ✅ FILTRAR PAGOS - SOLO por detalle_id
+    const pagosFiltrados: any[] = [];
+    
+    if (this.orden.pagos && this.orden.pagos.length > 0) {
+      for (const pago of this.orden.pagos) {
+        let detalleIdEncontrado = null;
+        let servicioEncontrado = null;
+        let clienteEncontrado = null;
+        
+        // 🔍 Buscar en observaciones
+        if (pago.observaciones) {
+          try {
+            let obs = pago.observaciones;
+            if (typeof obs === 'string') {
+              obs = JSON.parse(obs);
+            }
+            
+            detalleIdEncontrado = obs.detalle_id || null;
+            servicioEncontrado = obs.servicio || null;
+            clienteEncontrado = obs.cliente || null;
+            
+            console.log(`🔍 Analizando pago ID: ${pago.id}`, {
+              detalle_id: detalleIdEncontrado,
+              servicio: servicioEncontrado,
+              cliente: clienteEncontrado,
+              monto: pago.monto
+            });
+          } catch (error) {
+            console.warn('⚠️ Error parseando observaciones:', pago.observaciones);
+          }
+        }
+        
+        // ✅ SOLO incluir si el detalle_id coincide EXACTAMENTE
+        if (detalleIdEncontrado !== null && detalleIdEncontrado === detalle.id) {
+          console.log(`✅ Pago ID ${pago.id} agregado por detalle_id`);
+          pagosFiltrados.push(pago);
+        }
+        // 🔍 Si no tiene detalle_id, usar servicio como fallback
+        else if (detalleIdEncontrado === null && servicioEncontrado === detalle.servicio?.nombre) {
+          console.log(`⚠️ Pago ID ${pago.id} agregado por servicio (fallback)`);
+          pagosFiltrados.push(pago);
+        }
+        // 🔍 Si no tiene detalle_id ni servicio, usar referencia como fallback
+        else if (detalleIdEncontrado === null && pago.referencia && pago.referencia.includes(detalle.servicio?.nombre)) {
+          console.log(`⚠️ Pago ID ${pago.id} agregado por referencia (fallback)`);
+          pagosFiltrados.push(pago);
+        } else {
+          console.log(`❌ Pago ID ${pago.id} NO coincide`);
+        }
+      }
+    }
+    
+    console.log('📊 Pagos filtrados:', pagosFiltrados.length);
+    pagosFiltrados.forEach((p: any) => {
+      let detalleId = 'N/A';
+      try {
+        if (p.observaciones) {
+          const obs = typeof p.observaciones === 'string' ? JSON.parse(p.observaciones) : p.observaciones;
+          detalleId = obs.detalle_id || 'N/A';
+        }
+      } catch {}
+      console.log(`  - ID: ${p.id} | Monto: ${p.monto} | detalle_id: ${detalleId}`);
+    });
+    console.log('🔍 === FIN filtrarOrdenPorServicio ===');
+    
+    const totalPagadoFiltrado = pagosFiltrados.reduce((sum: number, p: any) => sum + parseFloat(p.monto), 0);
+    
+    // ✅ Crear orden filtrada
+    return {
+      ...this.orden,
+      detalles: detalleFiltrado,
+      total: precioUnitario,
+      totalPagado: totalPagadoFiltrado,
+      pagos: pagosFiltrados,
+      cliente_nombre: clienteNombre,
+      doctor: this.orden.doctor
+    };
+  }
+
+
+/**
+ * ✅ Abre el selector de archivos para un detalle específico
+ */
+abrirSelectorImagenDetalle(detalle: any, index: number) {
+  // Buscar el input correspondiente por índice
+  const inputs = this.fileInputsDetalle?.toArray();
+  if (inputs && inputs[index]) {
+    inputs[index].nativeElement.click();
+  } else {
+    // Fallback: usar un input temporal
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp,image/avif,image/heic,image/heif';
+    input.onchange = (e: any) => {
+      if (e.target.files && e.target.files.length > 0) {
+        this.procesarImagenDetalle(detalle, index, e.target.files[0]);
+      }
+    };
+    input.click();
+  }
+}
+
+/**
+ * ✅ Procesa la imagen seleccionada para un detalle
+ */
+procesarImagenDetalle(detalle: any, index: number, file: File) {
+  console.log('📁 Imagen seleccionada para detalle:', {
+    detalle_id: detalle.id,
+    servicio: detalle.servicio?.nombre,
+    file: file.name,
+    size: (file.size / 1024 / 1024).toFixed(2) + ' MB'
+  });
+  
+  const MAX_SIZE = 15 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Imagen muy grande',
+      text: `La imagen no puede superar los 15MB. Actualmente pesa ${(file.size / 1024 / 1024).toFixed(2)}MB.`,
+      confirmButtonColor: '#f43f5e'
+    });
+    return;
+  }
+  
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/heic', 'image/heif'];
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'heic', 'heif'];
+  
+  if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension || '')) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Formato no soportado',
+      text: 'Formatos permitidos: JPG, JPEG, PNG, GIF, WEBP, AVIF, HEIC',
+      confirmButtonColor: '#f43f5e'
+    });
+    return;
+  }
+  
+  this.subirImagenDetalleDesdeDetalle(detalle, index, file);
+}
+
+/**
+ * ✅ Sube la imagen para un detalle específico
+ */
+subirImagenDetalleDesdeDetalle(detalle: any, index: number, file: File) {
+  if (!detalle.id) {
+    Swal.fire('Error', 'No se pudo identificar el detalle', 'error');
+    return;
+  }
+  
+  this.detalleSubiendoImagen = index;
+  this.subiendoImagen = true;
+  
+  const formData = new FormData();
+  formData.append('imagen', file);
+  
+  this.subscriptions.push(
+    this.ordenService.subirImagenDetalle(detalle.id, file).subscribe({
+      next: (response) => {
+        this.detalleSubiendoImagen = null;
+        this.subiendoImagen = false;
+        
+        // ✅ Actualizar la URL de la imagen en el detalle
+        detalle.imagen_referencia_url = response.imagen_url;
+        
+        Swal.fire({
+          icon: 'success',
+          title: '¡Imagen actualizada!',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        
+        // ✅ Recargar la orden para actualizar la vista
+        this.cargarOrden(this.orden.id);
+      },
+      error: (error) => {
+        this.detalleSubiendoImagen = null;
+        this.subiendoImagen = false;
+        console.error('❌ Error subiendo imagen:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo subir la imagen.',
+          confirmButtonColor: '#f43f5e'
+        });
+      }
+    })
+  );
+}
+
+
+/**
+ * ✅ Maneja la selección de imagen desde el input oculto
+ */
+onImagenDetalleSeleccionada(event: Event, index: number) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files.length > 0) {
+    const detalle = this.orden.detalles[index];
+    this.procesarImagenDetalle(detalle, index, input.files[0]);
+    input.value = '';
+  }
+}
+
+/**
+ * ✅ Elimina la imagen de un detalle específico
+ */
+eliminarImagenDetalle(detalle: any, index: number) {
+  if (!detalle.id) {
+    Swal.fire('Error', 'No se pudo identificar el detalle', 'error');
+    return;
+  }
+  
+  if (!detalle.imagen_referencia_url) {
+    Swal.fire('Info', 'Este servicio no tiene imagen', 'info');
+    return;
+  }
+  
+  Swal.fire({
+    title: '¿Eliminar imagen?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#f43f5e'
   }).then((result) => {
     if (result.isConfirmed) {
-      // ✅ Actualizar el detalle específico en la base de datos
+      this.detalleSubiendoImagen = index;
+      this.subiendoImagen = true;
+      
       this.subscriptions.push(
-        this.ordenService.actualizarDetalleOrden(detalle.id, {
-          cliente_nombre: result.value.cliente_nombre,
-          detalle_cliente: result.value.detalle_cliente
-        }).subscribe({
+        this.ordenService.eliminarImagenDetalle(detalle.id).subscribe({
           next: () => {
-            // ✅ Actualizar localmente el detalle
-            detalle.cliente_nombre = result.value.cliente_nombre;
-            detalle.detalle_cliente = result.value.detalle_cliente;
+            this.detalleSubiendoImagen = null;
+            this.subiendoImagen = false;
             
-            // ✅ También actualizar en modalClienteData si existe
-            if (this.modalClienteData) {
-              this.modalClienteData.nombre = result.value.cliente_nombre;
-              this.modalClienteData.detalle = result.value.detalle_cliente;
-            }
+            detalle.imagen_referencia_url = null;
             
             Swal.fire({
               icon: 'success',
-              title: 'Actualizado',
-              text: 'La información del cliente se ha actualizado correctamente',
+              title: 'Imagen eliminada',
               timer: 1500,
               showConfirmButton: false
             });
             
-            // ✅ Recargar la orden para actualizar todo
             this.cargarOrden(this.orden.id);
           },
           error: (error) => {
-            console.error('Error actualizando cliente del servicio:', error);
-            Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+            this.detalleSubiendoImagen = null;
+            this.subiendoImagen = false;
+            console.error('❌ Error eliminando imagen:', error);
+            Swal.fire('Error', 'No se pudo eliminar la imagen', 'error');
           }
         })
       );
     }
   });
 }
+
+
+
+
 }

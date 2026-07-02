@@ -8,7 +8,7 @@
     </label>
     <label class="switch-label">
       <input type="radio" [(ngModel)]="tipoCliente" value="multiple" (change)="onTipoClienteChange()">
-      <span>Cliente diferente por servicio</span>
+      <span>Paciente diferente por servicio</span>
     </label>
   </div>
 
@@ -106,13 +106,13 @@
            placeholder="0.00">
   </div>
 
-
-
-        <!-- Cliente por servicio (solo si tipoCliente === 'multiple') -->
-        <div class="cliente-servicio" *ngIf="tipoCliente === 'multiple'">
-          <input type="text" [(ngModel)]="detalle.cliente_nombre" placeholder="Nombre del cliente" class="cliente-input-servicio">
-          <textarea [(ngModel)]="detalle.detalle_cliente" placeholder="Detalle del caso (opcional)" rows="1" class="detalle-input-servicio"></textarea>
-        </div>
+<!-- Cliente por servicio (solo si tipoCliente === 'multiple') -->
+<div class="cliente-servicio" *ngIf="tipoCliente === 'multiple'">
+  <div class="cliente-servicio-row">
+    <input type="text" [(ngModel)]="detalle.cliente_nombre" placeholder="Nombre del cliente" class="cliente-input-servicio">
+  </div>
+  <textarea [(ngModel)]="detalle.detalle_cliente" placeholder="Detalle del caso (opcional)" rows="1" class="detalle-input-servicio"></textarea>
+</div>
 
        <!-- multi-servicio-selector.component.html - Modificar sección de imagen preview -->
 <div class="imagen-servicio">

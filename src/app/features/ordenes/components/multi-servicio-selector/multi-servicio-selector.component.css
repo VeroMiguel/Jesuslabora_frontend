@@ -388,3 +388,40 @@
     width: 100%;
   }
 }
+/* multi-servicio-selector.component.css - AGREGAR */
+
+.cliente-servicio-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cliente-input-servicio {
+  flex: 2;
+  padding: 6px 10px;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.codigo-input-servicio {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--bor, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.codigo-input-servicio:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+@media (max-width: 480px) {
+  .cliente-servicio-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
