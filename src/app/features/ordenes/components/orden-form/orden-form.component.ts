@@ -229,12 +229,9 @@ async onSubmit() {
   
   // ✅ Construir detalles - MEJORADO
   const detallesParaEnviar = detallesValidos.map((d: any) => {
-    // ✅ Si es edición y hay una imagen URL existente, conservarla
-    // ✅ Si es edición y hay una imagen nueva (imagen_file), enviar null para que el backend la reemplace
-    // ✅ Si es creación, enviar null (la imagen se subirá después)
     const imagenUrl = this.esEdicion && d.imagen_url && !d.imagen_file 
-      ? d.imagen_url  // Conservar imagen existente
-      : null;         // Si hay imagen nueva o es creación, enviar null
+      ? d.imagen_url
+      : null;
     
     return {
       servicio_id: d.servicio_id,
@@ -282,7 +279,6 @@ async onSubmit() {
       if (ordenId && this.detallesIniciales) {
         for (let i = 0; i < this.detallesIniciales.length; i++) {
           const detalle = this.detallesIniciales[i];
-          // ✅ Solo subir si hay un archivo NUEVO
           if (detalle.imagen_file && ordenCreada.detalles && ordenCreada.detalles[i]) {
             const detalleId = ordenCreada.detalles[i].id;
             try {
@@ -293,6 +289,35 @@ async onSubmit() {
             }
           }
         }
+      }
+      
+      // ✅ PROGRAMAR NOTIFICACIONES
+      try {
+        // Obtener el nombre del doctor correctamente
+        const doctorNombre = ordenCreada.doctor?.nombre || 
+                            this.doctores.find(d => d.id === formValue.doctor_id)?.nombre || 
+                            'Doctor';
+        
+        const ordenParaNotificacion = {
+          id: ordenCreada.id,
+          id_externo: ordenCreada.id_externo,
+          doctor: { nombre: doctorNombre },
+          detalles: (ordenCreada.detalles || detallesParaEnviar).map((d: any) => ({
+            id: d.id,
+            servicio: d.servicio || { nombre: d.servicio_nombre || 'Servicio' },
+            fecha_limite: d.fecha_limite,
+            hora_limite: d.hora_limite,
+            cliente_nombre: d.cliente_nombre || datosParaEnviar.cliente_nombre || undefined,
+            detalle_cliente: d.detalle_cliente || datosParaEnviar.detalle_cliente || undefined
+          })),
+          cliente_nombre: datosParaEnviar.cliente_nombre || undefined  // ✅ null -> undefined
+        };
+        
+        const resultado = await this.notificationService.programarNotificacionOrden(ordenParaNotificacion);
+        console.log(`📨 Notificaciones programadas: ${resultado.programadas}`, resultado.mensaje);
+      } catch (notifError) {
+        console.error('❌ Error programando notificaciones:', notifError);
+        // No mostramos error al usuario porque la orden ya se creó
       }
       
       this.subiendoImagen = false;
