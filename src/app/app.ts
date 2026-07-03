@@ -7,8 +7,9 @@ import { SessionService } from './core/services/session.service';
 import { NotificationService } from './core/services/notification.service';
 import { FirebaseMessagingService } from './core/services/firebase-messaging.service';
 import { SessionTimeoutComponent } from './shared/components/session-timeout/session-timeout.component';
-import { environment } from '../environments/environment';  // ✅ AGREGAR ESTA LÍNEA
+import { environment } from '../environments/environment';
 import { LogoService } from './core/services/logo.service';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -28,36 +29,47 @@ export class AppComponent implements OnInit, OnDestroy {
   menuOpen: boolean = false;
   private authSubscription?: Subscription;
   private originalOverflow: string = '';
-   logoUrl: string | null = null;
+  logoUrl: string | null = null;
   private logoSubscription?: Subscription;
   
-  // app.ts - Modificar el constructor
-
-constructor(
+  constructor(
     public authService: AuthService,
     private renderer: Renderer2,
     private router: Router,
     private sessionService: SessionService,
     private notificationService: NotificationService,
     private fcmService: FirebaseMessagingService,
-    private logoService: LogoService  // ✅ AGREGAR
+    private logoService: LogoService
   ) {
     this.currentTheme = localStorage.getItem('theme') || 'dark';
     document.body.setAttribute('data-theme', this.currentTheme);
 
     this.registrarServiceWorker();
 
-    // ✅ Solo inicializar FCM en producción
+    // ✅ CORREGIDO: Inicializar FCM solo en producción
+    // y solo si está habilitado en el environment
     if (environment.production && environment.enableFirebase !== false) {
-        this.fcmService.initialize().then(() => {
-            console.log('[App] Firebase Messaging inicializado');
-        });
+        // Verificar que la configuración de Firebase no sea placeholder
+        const hasValidConfig = environment.firebase && 
+                              environment.firebase.apiKey && 
+                              !environment.firebase.apiKey.includes('PLACEHOLDER') &&
+                              environment.firebase.apiKey !== '';
+
+        if (hasValidConfig) {
+            this.fcmService.initialize().then(() => {
+                console.log('[App] Firebase Messaging inicializado');
+            }).catch((err) => {
+                console.warn('[App] Error inicializando Firebase:', err);
+            });
+        } else {
+            console.warn('[App] Firebase configurado con valores inválidos');
+        }
     } else {
         console.log('[App] Firebase Messaging deshabilitado en desarrollo');
     }
     
     this.solicitarPermisosIniciales();
-}
+  }
 
   ngOnInit() {
     this.registrarServiceWorker();
@@ -65,7 +77,6 @@ constructor(
     this.authSubscription = this.authService.authLoading$.subscribe((loading) => {
       if (!loading) {
         if (this.authService.isAuthenticated()) {
-          // ✅ Solo iniciar SessionService, no hay timer duplicado
           this.sessionService.iniciar();
           this.notificationService.solicitarPermiso();
         } else if (this.router.url !== '/login') {
@@ -74,7 +85,7 @@ constructor(
         }
       }
     });
-     // ✅ Suscribirse al logo
+    
     this.logoSubscription = this.logoService.logo$.subscribe(url => {
       this.logoUrl = url;
     });
@@ -96,10 +107,8 @@ constructor(
     }
   }
 
-// app.ts - Modificar el método registrarServiceWorker
-
-private registrarServiceWorker(): void {
-    // ✅ Solo registrar SW en producción, no en desarrollo local
+  private registrarServiceWorker(): void {
+    // ✅ Solo registrar SW en producción
     if (!environment.production) {
         console.log('[App] Service Worker deshabilitado en modo desarrollo');
         return;
@@ -112,7 +121,7 @@ private registrarServiceWorker(): void {
             console.warn('[App] Error registrando Service Worker:', err);
         });
     }
-}
+  }
 
   ngOnDestroy() {
     this.authSubscription?.unsubscribe();
@@ -123,7 +132,6 @@ private registrarServiceWorker(): void {
     this.logoSubscription?.unsubscribe();
   }
   
-
   toggleTheme() {
     this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
     document.body.setAttribute('data-theme', this.currentTheme);

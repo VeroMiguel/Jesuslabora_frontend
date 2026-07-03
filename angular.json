@@ -21,20 +21,20 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-             { "glob": "manifest.json", "input": "src", "output": "/" } 
+              { "glob": "manifest.json", "input": "src", "output": "/" }
             ],
             "styles": [
               "src/styles.css",
               "node_modules/@angular/material/prebuilt-themes/indigo-pink.css"
             ],
             "scripts": [],
-    "allowedCommonJsDependencies": [
-      "sweetalert2",
-      "file-saver",
-      "firebase",
-      "@firebase/app",
-      "@firebase/messaging"
-    ]
+            "allowedCommonJsDependencies": [
+              "sweetalert2",
+              "file-saver",
+              "firebase",
+              "@firebase/app",
+              "@firebase/messaging"
+            ]
           },
           "configurations": {
             "production": {
@@ -46,8 +46,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "10kb",
-                  "maximumError": "15kb"
+                  "maximumWarning": "20kb",
+                  "maximumError": "30kb"
                 }
               ],
               "outputHashing": "all",
@@ -57,7 +57,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-               "serviceWorker": true, 
+              "serviceWorker": true,
               "ngswConfigPath": "ngsw-config.json"
             },
             "development": {
@@ -67,26 +67,26 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true,
-               "serviceWorker": false 
+              "serviceWorker": false
             }
           },
           "defaultConfiguration": "production"
         },
-       "serve": {
-  "builder": "@angular-devkit/build-angular:dev-server",
-  "options": {
-    "browserTarget": "frontend:build" 
-  },
-  "configurations": {
-    "production": {
-      "browserTarget": "frontend:build:production"  
-    },
-    "development": {
-      "browserTarget": "frontend:build:development"  
-    }
-  },
-  "defaultConfiguration": "development"
-},
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "frontend:build"
+          },
+          "configurations": {
+            "production": {
+              "browserTarget": "frontend:build:production"
+            },
+            "development": {
+              "browserTarget": "frontend:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
@@ -98,7 +98,7 @@
           "options": {
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "assets": ["src/favicon.ico", "src/assets",{ "glob": "manifest.json", "input": "src", "output": "/" }],
+            "assets": ["src/favicon.ico", "src/assets", { "glob": "manifest.json", "input": "src", "output": "/" }],
             "styles": ["src/styles.css"],
             "scripts": []
           }

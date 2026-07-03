@@ -1,8 +1,9 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://jesuslaboraback-production.up.railway.app/api',  // ✅ CORREGIDO
-  baseUrl: 'https://jesuslaboraback-production.up.railway.app',     // ✅ CORREGIDO
-  wsUrl: 'wss://jesuslaboraback-production.up.railway.app',         // ✅ CORREGIDO
+  enableFirebase: true,  // ✅ AGREGAR ESTA LÍNEA
+  apiUrl: 'https://jesuslaboraback-production.up.railway.app/api',
+  baseUrl: 'https://jesuslaboraback-production.up.railway.app',
+  wsUrl: 'wss://jesuslaboraback-production.up.railway.app',
   firebase: {
     apiKey: 'AIzaSyD52uK_xBXysS7bLkc65DLoHgKmhOayg7k',
     authDomain: 'jesuslabora.firebaseapp.com',
