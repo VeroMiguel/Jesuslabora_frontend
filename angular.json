@@ -21,7 +21,8 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              { "glob": "manifest.json", "input": "src", "output": "/" }
+              { "glob": "manifest.json", "input": "src", "output": "/" },
+            { "glob": "firebase-messaging-sw.js", "input": "src", "output": "/" }
             ],
             "styles": [
               "src/styles.css",
@@ -98,7 +99,7 @@
           "options": {
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "assets": ["src/favicon.ico", "src/assets", { "glob": "manifest.json", "input": "src", "output": "/" }],
+            "assets": ["src/favicon.ico", "src/assets", { "glob": "manifest.json", "input": "src", "output": "/" }, { "glob": "firebase-messaging-sw.js", "input": "src", "output": "/" }],
             "styles": ["src/styles.css"],
             "scripts": []
           }
