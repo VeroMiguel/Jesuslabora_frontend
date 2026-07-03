@@ -71,9 +71,7 @@ export class FirebaseMessagingService implements OnDestroy {
    * Inicializa Firebase y FCM. Llama a este método una sola vez desde AppComponent.
    * Es seguro llamarlo múltiples veces (idempotente).
    */
-// firebase-messaging.service.ts - Modificar initialize
-
-async initialize(): Promise<void> {
+  async initialize(): Promise<void> {
     // ✅ No inicializar FCM en desarrollo local
     if (!environment.production) {
         console.log('[FCM] Firebase Messaging deshabilitado en modo desarrollo');
@@ -148,7 +146,7 @@ async initialize(): Promise<void> {
    * Solicita permiso de notificaciones y obtiene el token FCM del dispositivo.
    * Retorna el token o null si no se pudo obtener.
    */
-async solicitarPermisoYObtenerToken(forceRefresh: boolean = false): Promise<string | null> {
+  async solicitarPermisoYObtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.isSupported()) return null;
 
     if (this.statusSubject.value === 'not-initialized') {
@@ -172,13 +170,13 @@ async solicitarPermisoYObtenerToken(forceRefresh: boolean = false): Promise<stri
     }
 
     return this.obtenerToken(forceRefresh);
-}
+  }
 
- /**
- * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
- * @param forceRefresh Si es true, ignora la caché y obtiene un token nuevo
- */
-async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
+  /**
+   * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
+   * @param forceRefresh Si es true, ignora la caché y obtiene un token nuevo
+   */
+  async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.messaging) return null;
 
     // Si forceRefresh, eliminar caché
@@ -207,46 +205,46 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     }
 
     try {
-        const { getToken } = await import('firebase/messaging');
+      const { getToken } = await import('firebase/messaging');
 
-        // Registrar el SW de Firebase
-        let swRegistration: ServiceWorkerRegistration | undefined;
-        if ('serviceWorker' in navigator) {
-            try {
-                swRegistration = await navigator.serviceWorker.register(
-                      '/service-worker.js',  // ← Cambiar de firebase-messaging-sw.js a service-worker.js
-                    { scope: '/', updateViaCache: 'none' }
-                );
-                console.log('[FCM] ✅ SW de Firebase registrado');
-                
-                // Esperar a que el SW esté activo
-                if (swRegistration.waiting) {
-                    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                }
-            } catch (swErr) {
-                console.warn('[FCM] Error registrando SW:', swErr);
-            }
+      // Registrar el SW de Firebase
+      let swRegistration: ServiceWorkerRegistration | undefined;
+      if ('serviceWorker' in navigator) {
+        try {
+          swRegistration = await navigator.serviceWorker.register(
+            '/service-worker.js',
+            { scope: '/', updateViaCache: 'none' }
+          );
+          console.log('[FCM] ✅ SW de Firebase registrado');
+          
+          // Esperar a que el SW esté activo
+          if (swRegistration.waiting) {
+            swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        } catch (swErr) {
+          console.warn('[FCM] Error registrando SW:', swErr);
         }
+      }
 
-        const token = await getToken(this.messaging, {
-            vapidKey: environment.firebase.vapidKey,
-            serviceWorkerRegistration: swRegistration
-        });
+      const token = await getToken(this.messaging, {
+        vapidKey: environment.firebase.vapidKey,
+        serviceWorkerRegistration: swRegistration
+      });
 
-        if (token) {
-            this.saveTokenToCache(token);
-            this.tokenSubject.next(token);
-            console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
-            return token;
-        } else {
-            console.warn('[FCM] No se pudo obtener token');
-            return null;
-        }
-    } catch (error) {
-        console.error('[FCM] Error obteniendo token:', error);
+      if (token) {
+        this.saveTokenToCache(token);
+        this.tokenSubject.next(token);
+        console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
+        return token;
+      } else {
+        console.warn('[FCM] No se pudo obtener token');
         return null;
+      }
+    } catch (error) {
+      console.error('[FCM] Error obteniendo token:', error);
+      return null;
     }
-}
+  }
 
   // ─── Getters de estado ────────────────────────────────────────────────────
 
@@ -309,19 +307,19 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     );
   }
 
-private isPlaceholderConfig(): boolean {
-  const cfg = environment.firebase;
-  return (
-    !cfg ||
-    !cfg.apiKey ||
-    cfg.apiKey.includes('PLACEHOLDER') ||
-    cfg.apiKey === 'AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ12345' ||  // Detectar placeholder común
-    !cfg.projectId ||
-    cfg.projectId.includes('PLACEHOLDER') ||
-    !cfg.vapidKey ||
-    cfg.vapidKey.includes('PLACEHOLDER')
-  );
-}
+  private isPlaceholderConfig(): boolean {
+    const cfg = environment.firebase;
+    return (
+      !cfg ||
+      !cfg.apiKey ||
+      cfg.apiKey.includes('PLACEHOLDER') ||
+      cfg.apiKey === 'AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ12345' ||
+      !cfg.projectId ||
+      cfg.projectId.includes('PLACEHOLDER') ||
+      !cfg.vapidKey ||
+      cfg.vapidKey.includes('PLACEHOLDER')
+    );
+  }
 
   // ─── Ciclo de vida ────────────────────────────────────────────────────────
 

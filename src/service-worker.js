@@ -1,5 +1,5 @@
 /**
- * service-worker.js — Lab.Rosas
+ * service-worker.js — Lab.Demitrio
  * Service Worker ÚNICO (fusiona caché + Firebase)
  */
 
@@ -43,7 +43,7 @@ messaging.onBackgroundMessage((payload) => {
   }
   ultimaNotificacion = notificacionId;
   
-  let titulo = payload.notification?.title || '📋 Lab.jesuslabora';
+  let titulo = payload.notification?.title || '📋 Lab.Demitrio';
   let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
@@ -134,8 +134,9 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// service-worker.js - Reemplazar la sección de fetch
-
+// ============================================
+// ESTRATEGIA DE CACHÉ PARA FETCH
+// ============================================
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   

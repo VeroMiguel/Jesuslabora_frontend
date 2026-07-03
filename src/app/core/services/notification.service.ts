@@ -78,44 +78,44 @@ export class NotificationService implements OnDestroy {
     this.restaurarPendientes();
   }
 
-// Método para registrar token en backend
-async registrarTokenEnBackend(token: string): Promise<boolean> {
+  // Método para registrar token en backend
+  async registrarTokenEnBackend(token: string): Promise<boolean> {
     try {
-        const usuario = JSON.parse(localStorage.getItem('user') || '{}');
-        const response = await this.http.post(`${environment.apiUrl}/notificaciones/registrar-token`, {
-            token,
-            dispositivo: navigator.userAgent,
-            plataforma: this.getPlataforma()
-        }).toPromise();
-        
-        console.log('[Notif] ✅ Token registrado en backend:', response);
-        return true;
+      const usuario = JSON.parse(localStorage.getItem('user') || '{}');
+      const response = await this.http.post(`${environment.apiUrl}/notificaciones/registrar-token`, {
+        token,
+        dispositivo: navigator.userAgent,
+        plataforma: this.getPlataforma()
+      }).toPromise();
+      
+      console.log('[Notif] ✅ Token registrado en backend:', response);
+      return true;
     } catch (error) {
-        console.error('[Notif] ❌ Error registrando token en backend:', error);
-        return false;
+      console.error('[Notif] ❌ Error registrando token en backend:', error);
+      return false;
     }
-}
+  }
 
-// Método para eliminar token (al hacer logout)
-async eliminarTokenEnBackend(token: string): Promise<void> {
+  // Método para eliminar token (al hacer logout)
+  async eliminarTokenEnBackend(token: string): Promise<void> {
     try {
-        await this.http.delete(`${environment.apiUrl}/notificaciones/eliminar-token`, {
-            body: { token }
-        }).toPromise();
-        console.log('[Notif] Token eliminado del backend');
+      await this.http.delete(`${environment.apiUrl}/notificaciones/eliminar-token`, {
+        body: { token }
+      }).toPromise();
+      console.log('[Notif] Token eliminado del backend');
     } catch (error) {
-        console.error('[Notif] Error eliminando token:', error);
+      console.error('[Notif] Error eliminando token:', error);
     }
-}
+  }
 
-private getPlataforma(): string {
+  private getPlataforma(): string {
     const ua = navigator.userAgent;
     if (/android/i.test(ua)) return 'android';
     if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
     if (/windows/i.test(ua)) return 'windows';
     if (/mac/i.test(ua)) return 'mac';
     return 'web';
-}
+  }
 
   ngOnDestroy(): void {
     this.configSub?.unsubscribe();
@@ -143,15 +143,15 @@ private getPlataforma(): string {
     const concedido = permiso === 'granted';
     console.log(`[Notif] Permiso de notificaciones: ${permiso}`);
 
-  if (concedido) {
-        const token = await this.fcmService.solicitarPermisoYObtenerToken();
-        if (token) {
-            console.log('[Notif] Token FCM obtenido:', token);
-            await this.registrarTokenEnBackend(token); // ← AGREGAR ESTA LÍNEA
-        }
+    if (concedido) {
+      const token = await this.fcmService.solicitarPermisoYObtenerToken();
+      if (token) {
+        console.log('[Notif] Token FCM obtenido:', token);
+        await this.registrarTokenEnBackend(token);
+      }
     }
     return concedido;
-}
+  }
 
   get tienePermiso(): boolean {
     return 'Notification' in window && Notification.permission === 'granted';
@@ -268,122 +268,122 @@ private getPlataforma(): string {
     console.log('[Notif] Todas las notificaciones canceladas');
   }
 
- // ─── Helper para órdenes ──────────────────────────────────────────────────
+  // ─── Helper para órdenes ──────────────────────────────────────────────────
 
-/**
- * Programa notificaciones para una orden de trabajo.
- * Dispara a la hora exacta y también con la anticipación configurada.
- * ✅ Versión MEJORADA con soporte para push desde backend
- */
-// notification.service.ts - ACTUALIZAR para usar múltiples servicios
-
-async programarNotificacionOrden(orden: {
-  id: number | string;
-  id_externo: string;
-  detalles?: Array<{
-    id: number;
-    servicio?: { nombre: string };
-    fecha_limite: string;
-    hora_limite?: string;
+  /**
+   * Programa notificaciones para una orden de trabajo.
+   * Dispara a la hora exacta y también con la anticipación configurada.
+   * ✅ Versión MEJORADA con soporte para push desde backend
+   */
+  async programarNotificacionOrden(orden: {
+    id: number | string;
+    id_externo: string;
+    detalles?: Array<{
+      id: number;
+      servicio?: { nombre: string };
+      fecha_limite: string;
+      hora_limite?: string;
+      cliente_nombre?: string;
+      detalle_cliente?: string;
+    }>;
+    doctor?: { nombre: string };
     cliente_nombre?: string;
     detalle_cliente?: string;
-  }>;
-  doctor?: { nombre: string };
-  cliente_nombre?: string;
-  detalle_cliente?: string;
-}): Promise<ResultadoProgramacion> {
-  
-  if (!orden.detalles || orden.detalles.length === 0) {
-    return { programadas: 0, mensaje: 'La orden no tiene servicios' };
-  }
-  
-  const doctor = orden.doctor?.nombre ?? 'Doctor';
-  let programadas = 0;
-  const mensajes: string[] = [];
-  
-  // ✅ Programar notificación para CADA servicio
-  for (const detalle of orden.detalles) {
-    if (!detalle.fecha_limite) continue;
+  }): Promise<ResultadoProgramacion> {
     
-    const horaStr = detalle.hora_limite || '08:00';
-    const fechaHora = new Date(`${detalle.fecha_limite}T${horaStr}`);
+    if (!orden.detalles || orden.detalles.length === 0) {
+      return { programadas: 0, mensaje: 'La orden no tiene servicios' };
+    }
     
-    if (isNaN(fechaHora.getTime()) || fechaHora <= new Date()) continue;
+    const doctor = orden.doctor?.nombre ?? 'Doctor';
+    let programadas = 0;
+    const mensajes: string[] = [];
     
-    const servicio = detalle.servicio?.nombre ?? 'Servicio';
-    const cliente = detalle.cliente_nombre ?? orden.cliente_nombre;
-    const clienteTexto = cliente ? ` | ${cliente}` : '';
-    const detalleTexto = detalle.detalle_cliente ? ` (${detalle.detalle_cliente.substring(0, 30)})` : '';
-    
-    const cuerpo = `${doctor} — ${servicio}${clienteTexto}${detalleTexto}`;
-    const idBase = `orden-${orden.id}-servicio-${detalle.id}`;
-    
-    // Notificación a la hora exacta
-    const ok1 = this.programarNotificacion(
-      `${idBase}-exacta`,
-      `📋 Orden ${orden.id_externo} — ¡Hora límite!`,
-      `⏰ Vence AHORA: ${cuerpo}`,
-      fechaHora,
-      0
-    );
-    if (ok1) programadas++;
-    
-    // Notificación anticipada
-    const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
-    const ok2 = this.programarNotificacion(
-      `${idBase}-anticipada`,
-      `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en ${leadMin} min`,
-      cuerpo,
-      fechaHora,
-      leadMin
-    );
-    if (ok2) programadas++;
-    
-    // Notificación 30 min antes (si es diferente)
-    if (leadMin !== 30) {
-      const ok3 = this.programarNotificacion(
-        `${idBase}-30min`,
-        `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en 30 min`,
+    // ✅ Programar notificación para CADA servicio
+    for (const detalle of orden.detalles) {
+      if (!detalle.fecha_limite) continue;
+      
+      const horaStr = detalle.hora_limite || '08:00';
+      const fechaHora = new Date(`${detalle.fecha_limite}T${horaStr}`);
+      
+      if (isNaN(fechaHora.getTime()) || fechaHora <= new Date()) continue;
+      
+      const servicio = detalle.servicio?.nombre ?? 'Servicio';
+      const cliente = detalle.cliente_nombre ?? orden.cliente_nombre;
+      const clienteTexto = cliente ? ` | ${cliente}` : '';
+      const detalleTexto = detalle.detalle_cliente ? ` (${detalle.detalle_cliente.substring(0, 30)})` : '';
+      
+      const cuerpo = `${doctor} — ${servicio}${clienteTexto}${detalleTexto}`;
+      const idBase = `orden-${orden.id}-servicio-${detalle.id}`;
+      
+      // Notificación a la hora exacta
+      const ok1 = this.programarNotificacion(
+        `${idBase}-exacta`,
+        `📋 Orden ${orden.id_externo} — ¡Hora límite!`,
+        `⏰ Vence AHORA: ${cuerpo}`,
+        fechaHora,
+        0
+      );
+      if (ok1) programadas++;
+      
+      // Notificación anticipada
+      const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
+      const ok2 = this.programarNotificacion(
+        `${idBase}-anticipada`,
+        `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en ${leadMin} min`,
         cuerpo,
         fechaHora,
-        30
+        leadMin
       );
-      if (ok3) programadas++;
+      if (ok2) programadas++;
+      
+      // Notificación 30 min antes (si es diferente)
+      if (leadMin !== 30) {
+        const ok3 = this.programarNotificacion(
+          `${idBase}-30min`,
+          `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en 30 min`,
+          cuerpo,
+          fechaHora,
+          30
+        );
+        if (ok3) programadas++;
+      }
+      
+      mensajes.push(`${servicio}: ${fechaHora.toLocaleString('es-PE')}`);
     }
     
-    mensajes.push(`${servicio}: ${fechaHora.toLocaleString('es-PE')}`);
-  }
-  
-  // ✅ Programar push en backend para cada servicio
-  if (this.tokenFcm && orden.id) {
-    const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
-    
-    if (ordenIdNumerico > 0) {
-      try {
-        // Enviar todos los detalles al backend
-        await this.http.post(`${environment.apiUrl}/notificaciones/programar-orden-completa`, {
-          ordenId: ordenIdNumerico,
-          detalles: orden.detalles.map(d => ({
-            id: d.id,
-            fecha_limite: d.fecha_limite,
-            hora_limite: d.hora_limite,
-            servicio_nombre: d.servicio?.nombre
-          }))
-        }).toPromise();
-        console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend`);
-      } catch (error) {
-        console.error('[Notif] Error programando push en backend:', error);
+    // ✅ Programar push en backend para CADA servicio
+    if (orden.id) {
+      const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
+      
+      if (ordenIdNumerico > 0) {
+        try {
+          // Enviar TODOS los detalles al backend
+          const response = await this.http.post(`${environment.apiUrl}/notificaciones/programar-orden-completa`, {
+            ordenId: ordenIdNumerico,
+            detalles: orden.detalles.map(d => ({
+              id: d.id,
+              fecha_limite: d.fecha_limite,
+              hora_limite: d.hora_limite,
+              servicio_nombre: d.servicio?.nombre || 'Servicio',
+              cliente_nombre: d.cliente_nombre || orden.cliente_nombre || null
+            }))
+          }).toPromise();
+          
+          console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend:`, response);
+        } catch (error) {
+          console.error('[Notif] Error programando push en backend:', error);
+        }
       }
     }
+    
+    let mensaje = `${programadas} notificación(es) programadas para ${orden.detalles.length} servicio(s)`;
+    if (programadas > 0 && mensajes.length > 0) {
+      mensaje += `: ${mensajes.join(', ')}`;
+    }
+    
+    return { programadas, mensaje };
   }
-  
-  let mensaje = `${programadas} notificación(es) programadas para ${orden.detalles.length} servicio(s)`;
-  if (programadas > 0 && mensajes.length > 0) {
-    mensaje += `: ${mensajes.join(', ')}`;
-  }
-  
-  return { programadas, mensaje };
-}
 
   // ─── Estado ───────────────────────────────────────────────────────────────
 

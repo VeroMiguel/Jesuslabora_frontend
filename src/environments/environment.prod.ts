@@ -1,8 +1,8 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://demetriodentalback-production.up.railway.app/api',  // ✅ CORREGIDO
-  baseUrl: 'https://demetriodentalback-production.up.railway.app',     // ✅ CORREGIDO
-  wsUrl: 'wss://demetriodentalback-production.up.railway.app',         // ✅ CORREGIDO
+  apiUrl: 'https://jesuslaboraback-production.up.railway.app/api',  // ✅ CORREGIDO
+  baseUrl: 'https://jesuslaboraback-production.up.railway.app',     // ✅ CORREGIDO
+  wsUrl: 'wss://jesuslaboraback-production.up.railway.app',         // ✅ CORREGIDO
   firebase: {
     apiKey: 'AIzaSyD52uK_xBXysS7bLkc65DLoHgKmhOayg7k',
     authDomain: 'jesuslabora.firebaseapp.com',
