@@ -176,8 +176,13 @@ export class FirebaseMessagingService implements OnDestroy {
    * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
    * @param forceRefresh Si es true, ignora la caché y obtiene un token nuevo
    */
-  async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
-    if (!this.messaging) return null;
+// firebase-messaging.service.ts - VERSIÓN CORREGIDA
+
+async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
+    if (!this.messaging) {
+        console.warn('[FCM] Messaging no inicializado');
+        return null;
+    }
 
     // Si forceRefresh, eliminar caché
     if (forceRefresh) {
@@ -186,14 +191,18 @@ export class FirebaseMessagingService implements OnDestroy {
         localStorage.removeItem(FCM_TOKEN_DATE_KEY);
         this.tokenSubject.next(null);
         
-        // ✅ Limpiar el Service Worker para que se registre de nuevo
+        // ✅ Limpiar TODOS los Service Workers
         if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-                if (registration.active?.scriptURL.includes('firebase-messaging')) {
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
                     await registration.unregister();
-                    console.log('🗑️ Service Worker de Firebase desregistrado');
+                    console.log('🗑️ Service Worker desregistrado:', registration.scope);
                 }
+                // ✅ Esperar a que los SW se desregistren
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (err) {
+                console.warn('Error desregistrando SW:', err);
             }
         }
     } else {
@@ -205,46 +214,68 @@ export class FirebaseMessagingService implements OnDestroy {
     }
 
     try {
-      const { getToken } = await import('firebase/messaging');
+        const { getToken } = await import('firebase/messaging');
 
-      // Registrar el SW de Firebase
-      let swRegistration: ServiceWorkerRegistration | undefined;
-      if ('serviceWorker' in navigator) {
-        try {
-          swRegistration = await navigator.serviceWorker.register(
-            '/service-worker.js',
-            { scope: '/', updateViaCache: 'none' }
-          );
-          console.log('[FCM] ✅ SW de Firebase registrado');
-          
-          // Esperar a que el SW esté activo
-          if (swRegistration.waiting) {
-            swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
-        } catch (swErr) {
-          console.warn('[FCM] Error registrando SW:', swErr);
+        // ✅ Registrar el SW de Firebase CORRECTAMENTE
+        let swRegistration: ServiceWorkerRegistration | undefined;
+        if ('serviceWorker' in navigator) {
+            try {
+                // ✅ Primero intentar con firebase-messaging-sw.js
+                swRegistration = await navigator.serviceWorker.register(
+                    '/firebase-messaging-sw.js',
+                    { 
+                        scope: '/firebase-cloud-messaging-push-scope', 
+                        updateViaCache: 'none' 
+                    }
+                );
+                console.log('[FCM] ✅ SW de Firebase registrado en:', swRegistration.scope);
+                
+                // ✅ Esperar a que el SW esté activo
+                if (swRegistration.waiting) {
+                    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                
+                // ✅ Esperar a que el SW esté listo
+                await navigator.serviceWorker.ready;
+                console.log('[FCM] ✅ SW listo');
+            } catch (swErr) {
+                console.warn('[FCM] Error registrando firebase-messaging-sw.js:', swErr);
+                // ✅ Fallback a service-worker.js
+                try {
+                    swRegistration = await navigator.serviceWorker.register(
+                        '/service-worker.js',
+                        { 
+                            scope: '/', 
+                            updateViaCache: 'none' 
+                        }
+                    );
+                    console.log('[FCM] ✅ SW registrado con service-worker.js');
+                } catch (err2) {
+                    console.error('[FCM] Error registrando SW con fallback:', err2);
+                }
+            }
         }
-      }
 
-      const token = await getToken(this.messaging, {
-        vapidKey: environment.firebase.vapidKey,
-        serviceWorkerRegistration: swRegistration
-      });
+        // ✅ Obtener token con el SW registrado
+        const token = await getToken(this.messaging, {
+            vapidKey: environment.firebase.vapidKey,
+            serviceWorkerRegistration: swRegistration
+        });
 
-      if (token) {
-        this.saveTokenToCache(token);
-        this.tokenSubject.next(token);
-        console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
-        return token;
-      } else {
-        console.warn('[FCM] No se pudo obtener token');
-        return null;
-      }
+        if (token && token.length > 20) {
+            this.saveTokenToCache(token);
+            this.tokenSubject.next(token);
+            console.log(`[FCM] ✅ Token obtenido:`, token.substring(0, 30) + '...');
+            return token;
+        } else {
+            console.warn('[FCM] Token inválido o vacío:', token);
+            return null;
+        }
     } catch (error) {
-      console.error('[FCM] Error obteniendo token:', error);
-      return null;
+        console.error('[FCM] Error obteniendo token:', error);
+        return null;
     }
-  }
+}
 
   // ─── Getters de estado ────────────────────────────────────────────────────
 
