@@ -178,6 +178,8 @@ export class FirebaseMessagingService implements OnDestroy {
    */
 // firebase-messaging.service.ts - VERSIÓN CORREGIDA
 
+// firebase-messaging.service.ts - MODIFICAR obtenerToken
+
 async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     if (!this.messaging) {
         console.warn('[FCM] Messaging no inicializado');
@@ -200,7 +202,7 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
                     console.log('🗑️ Service Worker desregistrado:', registration.scope);
                 }
                 // ✅ Esperar a que los SW se desregistren
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (err) {
                 console.warn('Error desregistrando SW:', err);
             }
@@ -216,19 +218,16 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     try {
         const { getToken } = await import('firebase/messaging');
 
-        // ✅ Registrar el SW de Firebase CORRECTAMENTE
+        // ✅ Registrar el SW de Firebase
         let swRegistration: ServiceWorkerRegistration | undefined;
         if ('serviceWorker' in navigator) {
             try {
-                // ✅ Primero intentar con firebase-messaging-sw.js
+                // ✅ Registrar el SW con la ruta correcta
                 swRegistration = await navigator.serviceWorker.register(
-                    '/firebase-messaging-sw.js',
-                    { 
-                        scope: '/firebase-cloud-messaging-push-scope', 
-                        updateViaCache: 'none' 
-                    }
+                    '/firebase-messaging-sw.js',  // ✅ Usar firebase-messaging-sw.js directamente
+                    { scope: '/firebase-cloud-messaging-push-scope', updateViaCache: 'none' }
                 );
-                console.log('[FCM] ✅ SW de Firebase registrado en:', swRegistration.scope);
+                console.log('[FCM] ✅ SW de Firebase registrado');
                 
                 // ✅ Esperar a que el SW esté activo
                 if (swRegistration.waiting) {
@@ -239,15 +238,12 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
                 await navigator.serviceWorker.ready;
                 console.log('[FCM] ✅ SW listo');
             } catch (swErr) {
-                console.warn('[FCM] Error registrando firebase-messaging-sw.js:', swErr);
-                // ✅ Fallback a service-worker.js
+                console.warn('[FCM] Error registrando SW:', swErr);
+                // ✅ Si falla, intentar con service-worker.js
                 try {
                     swRegistration = await navigator.serviceWorker.register(
                         '/service-worker.js',
-                        { 
-                            scope: '/', 
-                            updateViaCache: 'none' 
-                        }
+                        { scope: '/', updateViaCache: 'none' }
                     );
                     console.log('[FCM] ✅ SW registrado con service-worker.js');
                 } catch (err2) {
@@ -256,19 +252,25 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
             }
         }
 
-        // ✅ Obtener token con el SW registrado
         const token = await getToken(this.messaging, {
             vapidKey: environment.firebase.vapidKey,
             serviceWorkerRegistration: swRegistration
         });
 
-        if (token && token.length > 20) {
+        if (token) {
             this.saveTokenToCache(token);
             this.tokenSubject.next(token);
-            console.log(`[FCM] ✅ Token obtenido:`, token.substring(0, 30) + '...');
-            return token;
+            console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
+            
+            // ✅ Verificar que el token sea válido (no debe ser undefined o null)
+            if (token && token.length > 10) {
+                return token;
+            } else {
+                console.warn('[FCM] Token obtenido es inválido:', token);
+                return null;
+            }
         } else {
-            console.warn('[FCM] Token inválido o vacío:', token);
+            console.warn('[FCM] No se pudo obtener token');
             return null;
         }
     } catch (error) {
