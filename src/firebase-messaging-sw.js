@@ -1,8 +1,4 @@
-/**
- * firebase-messaging-sw.js
- * Service Worker específico para Firebase Cloud Messaging
- */
-
+// firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -18,6 +14,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// ✅ IMPORTANTE: Usar setBackgroundMessageHandler en lugar de onBackgroundMessage
+// para compatibilidad con versiones anteriores
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw] Mensaje en background:', payload);
   
