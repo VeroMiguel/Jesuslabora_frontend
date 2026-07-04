@@ -30,6 +30,8 @@ let ultimaNotificacion = null;
 // ============================================
 // MANEJADOR DE NOTIFICACIONES EN BACKGROUND (FCM)
 // ============================================
+// service-worker.js - MODIFICAR la sección onBackgroundMessage
+
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Mensaje en background recibido:', payload);
   
@@ -43,16 +45,25 @@ messaging.onBackgroundMessage((payload) => {
   }
   ultimaNotificacion = notificacionId;
   
-  let titulo = payload.notification?.title || '📋 Lab.Demitrio';
-  let cuerpo = payload.notification?.body || 'Tienes una notificación pendiente';
+  // ✅ OBTENER TÍTULO Y CUERPO DEL PAYLOAD
+  let titulo = payload.notification?.title || payload.data?.titulo_detallado || '📋 Lab.Demitrio';
+  let cuerpo = payload.notification?.body || payload.data?.cuerpo_detallado || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
-  // ✅ Usar datos detallados de android.notification si existen
+  // ✅ Si hay datos detallados, mostrarlos
   if (payload.data?.titulo_detallado) {
     titulo = payload.data.titulo_detallado;
   }
   if (payload.data?.cuerpo_detallado) {
     cuerpo = payload.data.cuerpo_detallado;
+  }
+  
+  // ✅ Para Android, a veces el título viene en android.notification
+  if (payload.android?.notification?.title) {
+    titulo = payload.android.notification.title;
+  }
+  if (payload.android?.notification?.body) {
+    cuerpo = payload.android.notification.body;
   }
   
   const opciones = {
@@ -63,40 +74,53 @@ messaging.onBackgroundMessage((payload) => {
     data: { 
       url: urlDestino, 
       ...payload.data,
-      timestamp: ahora 
+      timestamp: ahora,
+      ordenId: payload.data?.ordenId
     },
     vibrate: [200, 100, 200],
     requireInteraction: true,
-    actions: [] // SIN BOTONES
+    actions: [
+      { action: 'ver', title: 'Ver orden' },
+      { action: 'cerrar', title: 'Cerrar' }
+    ]
   };
   
   self.registration.showNotification(titulo, opciones);
 });
 
-// ============================================
-// CLICK EN NOTIFICACIÓN
-// ============================================
+// ✅ MODIFICAR: Manejar clic en acción de la notificación
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Click en notificación');
+  console.log('[SW] Click en notificación:', event.action);
   event.notification.close();
   
   let urlDestino = '/ordenes';
-  if (event.notification.data && event.notification.data.url) {
+  
+  // ✅ Si es una acción "ver", usar la URL de la orden
+  if (event.action === 'ver') {
+    if (event.notification.data && event.notification.data.url) {
+      urlDestino = event.notification.data.url;
+    }
+    if (event.notification.data && event.notification.data.ordenId) {
+      urlDestino = `/ordenes/${event.notification.data.ordenId}`;
+    }
+  } else if (event.notification.data && event.notification.data.url) {
     urlDestino = event.notification.data.url;
   }
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // ✅ Buscar una ventana existente
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             client.focus();
-            if (client.url !== urlDestino && 'navigate' in client) {
+            if (!client.url.includes(urlDestino) && 'navigate' in client) {
               client.navigate(urlDestino);
             }
             return;
           }
         }
+        // ✅ Si no hay ventana, abrir una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlDestino);
         }
