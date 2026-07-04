@@ -176,15 +176,11 @@ export class FirebaseMessagingService implements OnDestroy {
    * Obtiene el token FCM. Usa caché si es reciente (< 7 días).
    * @param forceRefresh Si es true, ignora la caché y obtiene un token nuevo
    */
-// firebase-messaging.service.ts - VERSIÓN CORREGIDA
 
 // firebase-messaging.service.ts - MODIFICAR obtenerToken
 
 async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
-    if (!this.messaging) {
-        console.warn('[FCM] Messaging no inicializado');
-        return null;
-    }
+    if (!this.messaging) return null;
 
     // Si forceRefresh, eliminar caché
     if (forceRefresh) {
@@ -193,16 +189,17 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
         localStorage.removeItem(FCM_TOKEN_DATE_KEY);
         this.tokenSubject.next(null);
         
-        // ✅ Limpiar TODOS los Service Workers
+        // ✅ Limpiar el Service Worker para que se registre de nuevo
         if ('serviceWorker' in navigator) {
             try {
                 const registrations = await navigator.serviceWorker.getRegistrations();
                 for (const registration of registrations) {
-                    await registration.unregister();
-                    console.log('🗑️ Service Worker desregistrado:', registration.scope);
+                    if (registration.active?.scriptURL.includes('service-worker') || 
+                        registration.active?.scriptURL.includes('firebase-messaging')) {
+                        await registration.unregister();
+                        console.log('🗑️ Service Worker desregistrado');
+                    }
                 }
-                // ✅ Esperar a que los SW se desregistren
-                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (err) {
                 console.warn('Error desregistrando SW:', err);
             }
@@ -218,18 +215,18 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
     try {
         const { getToken } = await import('firebase/messaging');
 
-        // ✅ Registrar el SW de Firebase
+        // ✅ Registrar el SW de Firebase con la ruta correcta
         let swRegistration: ServiceWorkerRegistration | undefined;
         if ('serviceWorker' in navigator) {
             try {
-                // ✅ Registrar el SW con la ruta correcta
+                // ✅ Intentar registrar el SW
                 swRegistration = await navigator.serviceWorker.register(
-                    '/firebase-messaging-sw.js',  // ✅ Usar firebase-messaging-sw.js directamente
-                    { scope: '/firebase-cloud-messaging-push-scope', updateViaCache: 'none' }
+                    '/service-worker.js',
+                    { scope: '/', updateViaCache: 'none' }
                 );
                 console.log('[FCM] ✅ SW de Firebase registrado');
                 
-                // ✅ Esperar a que el SW esté activo
+                // Esperar a que el SW esté activo
                 if (swRegistration.waiting) {
                     swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
                 }
@@ -239,16 +236,6 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
                 console.log('[FCM] ✅ SW listo');
             } catch (swErr) {
                 console.warn('[FCM] Error registrando SW:', swErr);
-                // ✅ Si falla, intentar con service-worker.js
-                try {
-                    swRegistration = await navigator.serviceWorker.register(
-                        '/service-worker.js',
-                        { scope: '/', updateViaCache: 'none' }
-                    );
-                    console.log('[FCM] ✅ SW registrado con service-worker.js');
-                } catch (err2) {
-                    console.error('[FCM] Error registrando SW con fallback:', err2);
-                }
             }
         }
 
@@ -261,14 +248,7 @@ async obtenerToken(forceRefresh: boolean = false): Promise<string | null> {
             this.saveTokenToCache(token);
             this.tokenSubject.next(token);
             console.log(`[FCM] ✅ Token ${forceRefresh ? 'renovado' : 'obtenido'}:`, token.substring(0, 20) + '...');
-            
-            // ✅ Verificar que el token sea válido (no debe ser undefined o null)
-            if (token && token.length > 10) {
-                return token;
-            } else {
-                console.warn('[FCM] Token obtenido es inválido:', token);
-                return null;
-            }
+            return token;
         } else {
             console.warn('[FCM] No se pudo obtener token');
             return null;
