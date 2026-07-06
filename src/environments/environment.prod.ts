@@ -1,6 +1,7 @@
+// src/environments/environment.prod.ts
 export const environment = {
   production: true,
-  enableFirebase: true,  // ✅ AGREGAR ESTA LÍNEA
+  enableFirebase: true,  // ✅ IMPORTANTE: Debe ser true
   apiUrl: 'https://jesuslaboraback-production.up.railway.app/api',
   baseUrl: 'https://jesuslaboraback-production.up.railway.app',
   wsUrl: 'wss://jesuslaboraback-production.up.railway.app',

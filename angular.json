@@ -22,7 +22,7 @@
               "src/favicon.ico",
               "src/assets",
               { "glob": "manifest.json", "input": "src", "output": "/" },
-            { "glob": "firebase-messaging-sw.js", "input": "src", "output": "/" }
+              { "glob": "service-worker.js", "input": "src", "output": "/" }
             ],
             "styles": [
               "src/styles.css",
@@ -58,8 +58,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
-              "serviceWorker": true,
-              "ngswConfigPath": "src/ngsw-config.json"
+              "serviceWorker": true
             },
             "development": {
               "buildOptimizer": false,
@@ -99,7 +98,12 @@
           "options": {
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
-            "assets": ["src/favicon.ico", "src/assets", { "glob": "manifest.json", "input": "src", "output": "/" }, { "glob": "firebase-messaging-sw.js", "input": "src", "output": "/" }],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets",
+              { "glob": "manifest.json", "input": "src", "output": "/" },
+              { "glob": "service-worker.js", "input": "src", "output": "/" }
+            ],
             "styles": ["src/styles.css"],
             "scripts": []
           }

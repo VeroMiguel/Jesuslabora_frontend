@@ -1,3 +1,4 @@
+// src/app/app.component.ts
 import { Component, OnInit, HostListener, Renderer2, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
@@ -46,26 +47,25 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.registrarServiceWorker();
 
-    // ✅ CORREGIDO: Inicializar FCM solo en producción
-    // y solo si está habilitado en el environment
+    // ✅ Inicializar FCM en el constructor (ya lo tienes)
     if (environment.production && environment.enableFirebase !== false) {
-        // Verificar que la configuración de Firebase no sea placeholder
-        const hasValidConfig = environment.firebase && 
-                              environment.firebase.apiKey && 
-                              !environment.firebase.apiKey.includes('PLACEHOLDER') &&
-                              environment.firebase.apiKey !== '';
+      const hasValidConfig = environment.firebase && 
+                            environment.firebase.apiKey && 
+                            !environment.firebase.apiKey.includes('PLACEHOLDER') &&
+                            environment.firebase.apiKey !== '';
 
-        if (hasValidConfig) {
-            this.fcmService.initialize().then(() => {
-                console.log('[App] Firebase Messaging inicializado');
-            }).catch((err) => {
-                console.warn('[App] Error inicializando Firebase:', err);
-            });
-        } else {
-            console.warn('[App] Firebase configurado con valores inválidos');
-        }
+      if (hasValidConfig) {
+        console.log('[App] Inicializando Firebase desde constructor...');
+        this.fcmService.initialize().then(() => {
+          console.log('[App] ✅ Firebase Messaging inicializado');
+        }).catch((err) => {
+          console.warn('[App] Error inicializando Firebase:', err);
+        });
+      } else {
+        console.warn('[App] Firebase configurado con valores inválidos');
+      }
     } else {
-        console.log('[App] Firebase Messaging deshabilitado en desarrollo');
+      console.log('[App] Firebase Messaging deshabilitado en desarrollo');
     }
     
     this.solicitarPermisosIniciales();
