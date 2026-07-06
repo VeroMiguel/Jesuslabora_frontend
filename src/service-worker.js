@@ -1,16 +1,13 @@
-/**
- * service-worker.js — Lab.Demitrio
- * Service Worker ÚNICO (fusiona caché + Firebase)
- */
+// service-worker.js - VERSIÓN COMPLETA CORREGIDA
 
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'jesuslabora-v3';
+const CACHE_NAME = 'jesuslabora-v4';
 const APP_SHELL = ['/'];
 
 // ============================================
-// CONFIGURACIÓN DE FIREBASE
+// CONFIGURACIÓN DE FIREBASE (usar valores reales)
 // ============================================
 const firebaseConfig = {
   apiKey: 'AIzaSyD52uK_xBXysS7bLkc65DLoHgKmhOayg7k',
@@ -24,18 +21,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// ✅ Variable para evitar notificaciones duplicadas
 let ultimaNotificacion = null;
 
 // ============================================
-// MANEJADOR DE NOTIFICACIONES EN BACKGROUND (FCM)
+// MANEJADOR DE NOTIFICACIONES EN BACKGROUND
 // ============================================
-// service-worker.js - MODIFICAR la sección onBackgroundMessage
-
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Mensaje en background recibido:', payload);
   
-  // ✅ Prevenir duplicados (misma notificación en menos de 2 segundos)
+  // Prevenir duplicados
   const ahora = Date.now();
   const notificacionId = payload.data?.ordenId || payload.notification?.title;
   
@@ -45,12 +39,11 @@ messaging.onBackgroundMessage((payload) => {
   }
   ultimaNotificacion = notificacionId;
   
-  // ✅ OBTENER TÍTULO Y CUERPO DEL PAYLOAD
+  // Obtener título y cuerpo
   let titulo = payload.notification?.title || payload.data?.titulo_detallado || '📋 Lab.Demitrio';
   let cuerpo = payload.notification?.body || payload.data?.cuerpo_detallado || 'Tienes una notificación pendiente';
   let urlDestino = payload.data?.url || '/ordenes';
   
-  // ✅ Si hay datos detallados, mostrarlos
   if (payload.data?.titulo_detallado) {
     titulo = payload.data.titulo_detallado;
   }
@@ -58,7 +51,6 @@ messaging.onBackgroundMessage((payload) => {
     cuerpo = payload.data.cuerpo_detallado;
   }
   
-  // ✅ Para Android, a veces el título viene en android.notification
   if (payload.android?.notification?.title) {
     titulo = payload.android.notification.title;
   }
@@ -88,14 +80,15 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(titulo, opciones);
 });
 
-// ✅ MODIFICAR: Manejar clic en acción de la notificación
+// ============================================
+// CLICK EN NOTIFICACIÓN
+// ============================================
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Click en notificación:', event.action);
   event.notification.close();
   
   let urlDestino = '/ordenes';
   
-  // ✅ Si es una acción "ver", usar la URL de la orden
   if (event.action === 'ver') {
     if (event.notification.data && event.notification.data.url) {
       urlDestino = event.notification.data.url;
@@ -110,7 +103,6 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // ✅ Buscar una ventana existente
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             client.focus();
@@ -120,7 +112,6 @@ self.addEventListener('notificationclick', (event) => {
             return;
           }
         }
-        // ✅ Si no hay ventana, abrir una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlDestino);
         }
@@ -159,27 +150,15 @@ self.addEventListener('activate', (event) => {
 });
 
 // ============================================
-// ESTRATEGIA DE CACHÉ PARA FETCH
+// CACHÉ PARA FETCH
 // ============================================
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
-  // ✅ NO interceptar peticiones a la API
-  if (url.pathname.startsWith('/api')) {
-    return;
-  }
+  if (url.pathname.startsWith('/api')) return;
+  if (url.hostname.includes('firebase') || url.hostname.includes('google')) return;
+  if (event.request.method !== 'GET') return;
   
-  // ✅ NO interceptar peticiones a Firebase
-  if (url.hostname.includes('firebase') || url.hostname.includes('google')) {
-    return;
-  }
-  
-  // ✅ Solo cachear assets estáticos en GET
-  if (event.request.method !== 'GET') {
-    return;
-  }
-  
-  // ✅ Para navegación (cambios de ruta), siempre ir a la red
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -189,7 +168,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // ✅ Para assets estáticos, usar estrategia cache-first
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {

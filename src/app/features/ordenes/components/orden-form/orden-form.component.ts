@@ -209,7 +209,9 @@ cargarOrden() {
     this.previewUrl = null;
   }
 
-// orden-form.component.ts - MODIFICAR onSubmit()
+// features/ordenes/orden-form/orden-form.component.ts - SOLO LA PARTE MODIFICADA
+
+// Dentro del método onSubmit(), reemplazar la sección donde se crea la orden:
 
 async onSubmit() {
   const detallesValidos = this.detallesIniciales.filter(d => d.servicio_id && d.precio_unitario > 0);
@@ -227,7 +229,6 @@ async onSubmit() {
   const formValue = this.ordenForm.value;
   const clienteGlobal = this.multiServicioSelector?.clienteUnico || { nombre: '', detalle: '' };
   
-  // ✅ Construir detalles - MEJORADO
   const detallesParaEnviar = detallesValidos.map((d: any) => {
     const imagenUrl = this.esEdicion && d.imagen_url && !d.imagen_file 
       ? d.imagen_url
@@ -245,7 +246,6 @@ async onSubmit() {
     };
   });
   
-  // ✅ Calcular pago_inicial total
   let pagoInicialTotal = 0;
   if (this.tipoCliente === 'multiple') {
     pagoInicialTotal = detallesValidos.reduce((sum, d) => sum + (Number(d.pago_inicial) || 0), 0);
@@ -275,7 +275,7 @@ async onSubmit() {
       const ordenCreada = respuesta.orden || respuesta;
       const ordenId = ordenCreada.id;
       
-      // ✅ Subir imágenes SOLO si hay archivos nuevos
+      // Subir imágenes si hay archivos nuevos
       if (ordenId && this.detallesIniciales) {
         for (let i = 0; i < this.detallesIniciales.length; i++) {
           const detalle = this.detallesIniciales[i];
@@ -291,9 +291,8 @@ async onSubmit() {
         }
       }
       
-      // ✅ PROGRAMAR NOTIFICACIONES
+      // ✅ PROGRAMAR NOTIFICACIONES - VERSIÓN CORREGIDA
       try {
-        // Obtener el nombre del doctor correctamente
         const doctorNombre = ordenCreada.doctor?.nombre || 
                             this.doctores.find(d => d.id === formValue.doctor_id)?.nombre || 
                             'Doctor';
@@ -307,14 +306,30 @@ async onSubmit() {
             servicio: d.servicio || { nombre: d.servicio_nombre || 'Servicio' },
             fecha_limite: d.fecha_limite,
             hora_limite: d.hora_limite,
-            cliente_nombre: d.cliente_nombre || datosParaEnviar.cliente_nombre || undefined,
-            detalle_cliente: d.detalle_cliente || datosParaEnviar.detalle_cliente || undefined
+            cliente_nombre: d.cliente_nombre || datosParaEnviar.cliente_nombre || undefined
           })),
-          cliente_nombre: datosParaEnviar.cliente_nombre || undefined  // ✅ null -> undefined
+          cliente_nombre: datosParaEnviar.cliente_nombre || undefined
         };
         
+        // ✅ Usar el método mejorado de notification.service
         const resultado = await this.notificationService.programarNotificacionOrden(ordenParaNotificacion);
         console.log(`📨 Notificaciones programadas: ${resultado.programadas}`, resultado.mensaje);
+        
+        // Mostrar mensaje de éxito con información de notificaciones
+        if (resultado.programadas > 0) {
+          const Toast = Swal.mixin({
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+          });
+          Toast.fire({
+            icon: 'success',
+            title: '🔔 Notificaciones programadas',
+            html: resultado.mensaje
+          });
+        }
       } catch (notifError) {
         console.error('❌ Error programando notificaciones:', notifError);
         // No mostramos error al usuario porque la orden ya se creó

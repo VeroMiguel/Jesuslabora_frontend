@@ -1,26 +1,4 @@
-/**
- * NotificationService
- * ─────────────────────────────────────────────────────────────────────────────
- * Gestiona todas las notificaciones de la aplicación:
- *
- *  • Notificaciones nativas del navegador (Notification API)
- *  • Notificaciones push reales vía Firebase Cloud Messaging (FCM)
- *  • Programación de alertas con setTimeout (foreground)
- *  • Persistencia en localStorage para restaurar al recargar
- *  • Integración con ConfigService para respetar preferencias del usuario
- *
- * Flujo para notificaciones en celular (background):
- *   1. FirebaseMessagingService obtiene el token FCM del dispositivo
- *   2. El token se envía al backend junto con la orden
- *   3. El backend usa Firebase Admin SDK para enviar push al dispositivo
- *   4. El SW de Firebase (firebase-messaging-sw.js) muestra la notificación
- *      incluso con el navegador cerrado
- *
- * Flujo para notificaciones en foreground (app abierta):
- *   1. programarNotificacion() usa setTimeout
- *   2. Al dispararse, muestra Notification nativa + toast SweetAlert2
- */
-
+// core/services/notification.service.ts - VERSIÓN COMPLETA CORREGIDA
 import { Injectable, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
@@ -29,13 +7,10 @@ import { FirebaseMessagingService, FcmMessage } from './firebase-messaging.servi
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
-// ─── Interfaces públicas ─────────────────────────────────────────────────────
-
 export interface NotificacionProgramada {
   id: string;
   titulo: string;
   cuerpo: string;
-  /** Momento exacto en que se disparará (ya con anticipación aplicada) */
   fechaDisparo: Date;
   timerId?: any;
 }
@@ -50,10 +25,7 @@ export interface ResultadoProgramacion {
 })
 export class NotificationService implements OnDestroy {
 
-  // ─── Constantes ──────────────────────────────────────────────────────────────
   private readonly STORAGE_KEY = 'notificaciones_programadas';
-
-  // ─── Estado ───────────────────────────────────────────────────────────────
   private notificaciones = new Map<string, NotificacionProgramada>();
   private config!: AppConfig;
   private configSub?: Subscription;
@@ -64,21 +36,19 @@ export class NotificationService implements OnDestroy {
     private configService: ConfigService,
     private fcmService: FirebaseMessagingService
   ) {
-    // Mantener config actualizada en tiempo real
     this.configSub = this.configService.config$.subscribe(cfg => {
       this.config = cfg;
     });
 
-    // Mostrar mensajes FCM en foreground como toast
     this.fcmSub = this.fcmService.message$.subscribe(msg => {
       if (msg) this.mostrarMensajeFcmEnForeground(msg);
     });
 
-    // Restaurar notificaciones pendientes del localStorage
     this.restaurarPendientes();
   }
 
-  // Método para registrar token en backend
+  // ─── Registrar token en backend ──────────────────────────────────────────
+
   async registrarTokenEnBackend(token: string): Promise<boolean> {
     try {
       const usuario = JSON.parse(localStorage.getItem('user') || '{}');
@@ -96,7 +66,6 @@ export class NotificationService implements OnDestroy {
     }
   }
 
-  // Método para eliminar token (al hacer logout)
   async eliminarTokenEnBackend(token: string): Promise<void> {
     try {
       await this.http.delete(`${environment.apiUrl}/notificaciones/eliminar-token`, {
@@ -124,10 +93,6 @@ export class NotificationService implements OnDestroy {
 
   // ─── Permisos ─────────────────────────────────────────────────────────────
 
-  /**
-   * Solicita permiso de notificaciones del navegador.
-   * También inicializa FCM y obtiene el token del dispositivo.
-   */
   async solicitarPermiso(): Promise<boolean> {
     if (!('Notification' in window)) {
       console.warn('[Notif] Navegador no soporta notificaciones');
@@ -176,15 +141,6 @@ export class NotificationService implements OnDestroy {
 
   // ─── Programar notificación ───────────────────────────────────────────────
 
-  /**
-   * Programa una notificación para dispararse en un momento futuro.
-   *
-   * @param id           Identificador único (ej: "orden-42-exacta")
-   * @param titulo       Título de la notificación
-   * @param cuerpo       Cuerpo del mensaje
-   * @param fechaHora    Momento base (hora límite de la orden)
-   * @param minutosAntes Anticipación en minutos (0 = hora exacta)
-   */
   programarNotificacion(
     id: string,
     titulo: string,
@@ -205,7 +161,6 @@ export class NotificationService implements OnDestroy {
       return false;
     }
 
-    // Cancelar si ya existe una con el mismo id
     this.cancelarNotificacion(id);
 
     const notif: NotificacionProgramada = { id, titulo, cuerpo, fechaDisparo };
@@ -224,11 +179,6 @@ export class NotificationService implements OnDestroy {
     return true;
   }
 
-  // ─── Mostrar notificación inmediata ───────────────────────────────────────
-
-  /**
-   * Muestra una notificación nativa del navegador de forma inmediata.
-   */
   mostrarNotificacion(titulo: string, cuerpo: string, tag?: string): void {
     if (!this.tienePermiso) return;
 
@@ -247,8 +197,6 @@ export class NotificationService implements OnDestroy {
       console.error('[Notif] Error mostrando notificación nativa:', err);
     }
   }
-
-  // ─── Cancelar notificaciones ──────────────────────────────────────────────
 
   cancelarNotificacion(id: string): void {
     const notif = this.notificaciones.get(id);
@@ -271,9 +219,7 @@ export class NotificationService implements OnDestroy {
   // ─── Helper para órdenes ──────────────────────────────────────────────────
 
   /**
-   * Programa notificaciones para una orden de trabajo.
-   * Dispara a la hora exacta y también con la anticipación configurada.
-   * ✅ Versión MEJORADA con soporte para push desde backend
+   * ✅ VERSIÓN CORREGIDA - Usa el endpoint /programar que funciona
    */
   async programarNotificacionOrden(orden: {
     id: number | string;
@@ -284,11 +230,9 @@ export class NotificationService implements OnDestroy {
       fecha_limite: string;
       hora_limite?: string;
       cliente_nombre?: string;
-      detalle_cliente?: string;
     }>;
     doctor?: { nombre: string };
     cliente_nombre?: string;
-    detalle_cliente?: string;
   }): Promise<ResultadoProgramacion> {
     
     if (!orden.detalles || orden.detalles.length === 0) {
@@ -299,7 +243,7 @@ export class NotificationService implements OnDestroy {
     let programadas = 0;
     const mensajes: string[] = [];
     
-    // ✅ Programar notificación para CADA servicio
+    // ✅ Programar notificaciones locales (foreground)
     for (const detalle of orden.detalles) {
       if (!detalle.fecha_limite) continue;
       
@@ -311,9 +255,7 @@ export class NotificationService implements OnDestroy {
       const servicio = detalle.servicio?.nombre ?? 'Servicio';
       const cliente = detalle.cliente_nombre ?? orden.cliente_nombre;
       const clienteTexto = cliente ? ` | ${cliente}` : '';
-      const detalleTexto = detalle.detalle_cliente ? ` (${detalle.detalle_cliente.substring(0, 30)})` : '';
-      
-      const cuerpo = `${doctor} — ${servicio}${clienteTexto}${detalleTexto}`;
+      const cuerpo = `${doctor} — ${servicio}${clienteTexto}`;
       const idBase = `orden-${orden.id}-servicio-${detalle.id}`;
       
       // Notificación a la hora exacta
@@ -337,43 +279,46 @@ export class NotificationService implements OnDestroy {
       );
       if (ok2) programadas++;
       
-      // Notificación 30 min antes (si es diferente)
-      if (leadMin !== 30) {
-        const ok3 = this.programarNotificacion(
-          `${idBase}-30min`,
-          `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en 30 min`,
-          cuerpo,
-          fechaHora,
-          30
-        );
-        if (ok3) programadas++;
-      }
-      
       mensajes.push(`${servicio}: ${fechaHora.toLocaleString('es-PE')}`);
     }
     
-    // ✅ Programar push en backend para CADA servicio
-    if (orden.id) {
-      const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
-      
-      if (ordenIdNumerico > 0) {
-        try {
-          // Enviar TODOS los detalles al backend
-          const response = await this.http.post(`${environment.apiUrl}/notificaciones/programar-orden-completa`, {
+    // ✅ NUEVO: Programar push en backend usando el endpoint /programar (que funciona)
+    const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
+    
+    if (ordenIdNumerico > 0) {
+      try {
+        const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
+        
+        console.log(`[Notif] 📨 Programando push en backend para orden ${ordenIdNumerico}...`);
+        
+        // ✅ Programar notificación ANTICIPADA
+        const response1 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
+          ordenId: ordenIdNumerico,
+          minutosAntes: leadMin
+        }).toPromise();
+        console.log(`[Notif] ✅ Push anticipada programada (${leadMin} min):`, response1);
+        
+        // ✅ Programar notificación EXACTA
+        const response2 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
+          ordenId: ordenIdNumerico,
+          minutosAntes: 0
+        }).toPromise();
+        console.log(`[Notif] ✅ Push exacta programada:`, response2);
+        
+        // ✅ También programar para 30 min (si la anticipación es diferente)
+        if (leadMin !== 30) {
+          const response3 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
             ordenId: ordenIdNumerico,
-            detalles: orden.detalles.map(d => ({
-              id: d.id,
-              fecha_limite: d.fecha_limite,
-              hora_limite: d.hora_limite,
-              servicio_nombre: d.servicio?.nombre || 'Servicio',
-              cliente_nombre: d.cliente_nombre || orden.cliente_nombre || null
-            }))
+            minutosAntes: 30
           }).toPromise();
-          
-          console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend:`, response);
-        } catch (error) {
-          console.error('[Notif] Error programando push en backend:', error);
+          console.log(`[Notif] ✅ Push 30min programada:`, response3);
         }
+        
+        console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend`);
+        
+      } catch (error) {
+        console.error('[Notif] ❌ Error programando push en backend:', error);
+        // No mostrar error al usuario, la orden ya está creada
       }
     }
     
@@ -401,24 +346,17 @@ export class NotificationService implements OnDestroy {
 
   // ─── Privados ─────────────────────────────────────────────────────────────
 
-  /**
-   * Dispara la notificación: nativa + efectos + toast de respaldo.
-   */
   private disparar(titulo: string, cuerpo: string, tag: string): void {
-    // Vibración
     if (this.config?.vibracionHabilitada && 'vibrate' in navigator) {
       navigator.vibrate([150, 80, 150]);
     }
 
-    // Sonido
     if (this.config?.sonidoHabilitado) {
       this.reproducirBeep();
     }
 
-    // Notificación nativa
     this.mostrarNotificacion(titulo, cuerpo, tag);
 
-    // Toast SweetAlert2 como respaldo visual
     Swal.fire({
       icon: 'warning',
       title: titulo,
@@ -431,24 +369,17 @@ export class NotificationService implements OnDestroy {
     });
   }
 
-  /**
-   * Muestra un mensaje FCM recibido en foreground como toast.
-   */
   private mostrarMensajeFcmEnForeground(msg: FcmMessage): void {
-    // Vibración
     if (this.config?.vibracionHabilitada && 'vibrate' in navigator) {
       navigator.vibrate([200, 100, 200]);
     }
 
-    // Sonido
     if (this.config?.sonidoHabilitado) {
       this.reproducirBeep();
     }
 
-    // Notificación nativa
     this.mostrarNotificacion(msg.title, msg.body, msg.tag);
 
-    // Toast visual
     Swal.fire({
       icon: 'info',
       title: msg.title,
@@ -534,7 +465,6 @@ export class NotificationService implements OnDestroy {
         console.log(`[Notif] 🔄 ${restauradas} notificación(es) restaurada(s)`);
       }
 
-      // Limpiar entradas expiradas del storage
       this.persistir();
     } catch (err) {
       console.error('[Notif] Error restaurando notificaciones:', err);
