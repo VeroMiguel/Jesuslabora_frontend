@@ -219,7 +219,7 @@ export class NotificationService implements OnDestroy {
   // ─── Helper para órdenes ──────────────────────────────────────────────────
 
   /**
-   * ✅ VERSIÓN CORREGIDA - Usa el endpoint /programar que funciona
+   * ✅ VERSIÓN CORREGIDA - Programa notificaciones para CADA servicio
    */
   async programarNotificacionOrden(orden: {
     id: number | string;
@@ -242,13 +242,13 @@ export class NotificationService implements OnDestroy {
     const doctor = orden.doctor?.nombre ?? 'Doctor';
     let programadas = 0;
     const mensajes: string[] = [];
+    const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
     
-    // ✅ Programar notificaciones locales (foreground)
+    // ✅ Programar notificaciones locales (foreground) para CADA servicio
     for (const detalle of orden.detalles) {
-      if (!detalle.fecha_limite) continue;
+      if (!detalle.fecha_limite || !detalle.hora_limite) continue;
       
-      const horaStr = detalle.hora_limite || '08:00';
-      const fechaHora = new Date(`${detalle.fecha_limite}T${horaStr}`);
+      const fechaHora = new Date(`${detalle.fecha_limite}T${detalle.hora_limite}`);
       
       if (isNaN(fechaHora.getTime()) || fechaHora <= new Date()) continue;
       
@@ -269,7 +269,6 @@ export class NotificationService implements OnDestroy {
       if (ok1) programadas++;
       
       // Notificación anticipada
-      const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
       const ok2 = this.programarNotificacion(
         `${idBase}-anticipada`,
         `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en ${leadMin} min`,
@@ -279,39 +278,51 @@ export class NotificationService implements OnDestroy {
       );
       if (ok2) programadas++;
       
+      // Notificación 30 min antes (si la anticipación es diferente)
+      if (leadMin !== 30) {
+        const ok3 = this.programarNotificacion(
+          `${idBase}-30min`,
+          `⚠️ Orden ${orden.id_externo} — "${servicio}" vence en 30 min`,
+          cuerpo,
+          fechaHora,
+          30
+        );
+        if (ok3) programadas++;
+      }
+      
       mensajes.push(`${servicio}: ${fechaHora.toLocaleString('es-PE')}`);
     }
     
-    // ✅ NUEVO: Programar push en backend usando el endpoint /programar (que funciona)
+    // ✅ Programar push en backend para CADA servicio
     const ordenIdNumerico = typeof orden.id === 'string' ? parseInt(orden.id) || 0 : orden.id;
     
     if (ordenIdNumerico > 0) {
       try {
-        const leadMin = this.config?.tiempoNotificacionAnticipada ?? 30;
+        console.log(`[Notif] 📨 Programando push en backend para ${orden.detalles.length} servicio(s)...`);
         
-        console.log(`[Notif] 📨 Programando push en backend para orden ${ordenIdNumerico}...`);
-        
-        // ✅ Programar notificación ANTICIPADA
-        const response1 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
-          ordenId: ordenIdNumerico,
-          minutosAntes: leadMin
-        }).toPromise();
-        console.log(`[Notif] ✅ Push anticipada programada (${leadMin} min):`, response1);
-        
-        // ✅ Programar notificación EXACTA
-        const response2 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
-          ordenId: ordenIdNumerico,
-          minutosAntes: 0
-        }).toPromise();
-        console.log(`[Notif] ✅ Push exacta programada:`, response2);
-        
-        // ✅ También programar para 30 min (si la anticipación es diferente)
-        if (leadMin !== 30) {
-          const response3 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
+        // ✅ Programar notificación para CADA servicio
+        for (const detalle of orden.detalles) {
+          if (!detalle.fecha_limite || !detalle.hora_limite) continue;
+          
+          const fechaHora = new Date(`${detalle.fecha_limite}T${detalle.hora_limite}`);
+          if (isNaN(fechaHora.getTime()) || fechaHora <= new Date()) continue;
+          
+          const servicio = detalle.servicio?.nombre ?? 'Servicio';
+          console.log(`[Notif] 📨 Programando push para servicio: "${servicio}" (detalle ${detalle.id})`);
+          
+          // ✅ Programar notificación ANTICIPADA
+          const response1 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
             ordenId: ordenIdNumerico,
-            minutosAntes: 30
+            minutosAntes: leadMin
           }).toPromise();
-          console.log(`[Notif] ✅ Push 30min programada:`, response3);
+          console.log(`[Notif] ✅ Push anticipada programada para detalle ${detalle.id} (${leadMin} min)`);
+          
+          // ✅ Programar notificación EXACTA
+          const response2 = await this.http.post(`${environment.apiUrl}/notificaciones/programar`, {
+            ordenId: ordenIdNumerico,
+            minutosAntes: 0
+          }).toPromise();
+          console.log(`[Notif] ✅ Push exacta programada para detalle ${detalle.id}`);
         }
         
         console.log(`[Notif] 📨 ${orden.detalles.length} servicio(s) programados en backend`);
