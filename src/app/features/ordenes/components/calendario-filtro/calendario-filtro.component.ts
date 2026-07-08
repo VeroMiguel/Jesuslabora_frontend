@@ -1,4 +1,4 @@
-// calendario-filtro.component.ts - VERSIÓN COMPLETA CORREGIDA
+// calendario-filtro.component.ts - VERSIÓN CORREGIDA
 
 import { Component, OnInit, OnDestroy, Output, EventEmitter, Input, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -34,12 +34,15 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   cargando: boolean = false;
   calendarApi: any = null;
   
+  // ✅ Flag para evitar scroll innecesario
+  private navegando: boolean = false;
+  
   // Almacenar fecha/hora actual del servidor
   private fechaHoraActual: Date = new Date();
   
   private subscriptions: Subscription[] = [];
   
-  // CALENDAR OPTIONS CORREGIDO PARA FULLCALENDAR V6
+  // CALENDAR OPTIONS CORREGIDO
   calendarOptions: any = {
     plugins: [dayGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
@@ -62,7 +65,9 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     eventClick: this.onEventClick.bind(this),
     eventDidMount: this.onEventMount.bind(this),
     height: 'auto',
-    loading: this.onLoading.bind(this)
+    loading: this.onLoading.bind(this),
+    // ✅ NUEVO: Callback para detectar navegación
+    datesSet: this.onDatesSet.bind(this)
   };
 
   // Propiedades para el modal
@@ -80,7 +85,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   ) {}
   
   ngOnInit() {
-    // Obtener fecha/hora del servidor
     this.obtenerFechaHoraServidor();
     
     if (this.doctores.length === 0) {
@@ -88,7 +92,24 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
   
-  // Método para obtener fecha/hora del servidor
+  // ✅ NUEVO: Callback cuando cambia el mes
+  onDatesSet(info: any) {
+    // Marcar que estamos navegando para no hacer scroll innecesario
+    this.navegando = true;
+    
+    // Emitir filtros sin scroll forzado
+    this.filtrosAplicados.emit({
+      doctor_id: this.doctorSeleccionado?.id || null,
+      tipo_fecha: this.tipoFecha,
+      estado: this.estadoSeleccionado
+    });
+    
+    // Resetear flag después de un breve momento
+    setTimeout(() => {
+      this.navegando = false;
+    }, 300);
+  }
+  
   obtenerFechaHoraServidor() {
     this.subscriptions.push(
       this.ordenService.getFechaHoraServidor().subscribe({
@@ -98,7 +119,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
         },
         error: (error) => {
           console.error('Error obteniendo fecha/hora del servidor:', error);
-          // Fallback a fecha local
           this.fechaHoraActual = new Date();
           console.log('🕐 Calendario - Usando fecha local:', this.fechaHoraActual.toLocaleString('es-PE'));
         }
@@ -113,7 +133,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
 
-  // COMPARADOR PARA NGModel
   compararDoctores(d1: any, d2: any): boolean {
     return d1 && d2 && d1.id === d2.id;
   }
@@ -136,7 +155,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     );
   }
 
-  // MÉTODO CORREGIDO - cargarEventos()
   cargarEventos(info: any, successCallback: any, failureCallback: any) {
     const fechaInicio = info.startStr.split('T')[0];
     const fechaFin = info.endStr.split('T')[0];
@@ -163,8 +181,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
           }
           
           const eventos: any[] = [];
-          
-          // Usar this.fechaHoraActual (obtenida del servidor)
           const ahora = this.fechaHoraActual || new Date();
           console.log('🕐 Fecha actual para colores:', ahora.toLocaleString('es-PE'));
           
@@ -181,18 +197,12 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
                 
                 if (!fechaEvento) return;
                 
-                // ================================================================
-                // ✅ LOGICA DE COLOR MODIFICADA AQUÍ
-                // ================================================================
                 let color = '#6366f1'; // Morado: Normal
                 
-                // 1️⃣ PRIORIDAD MÁXIMA: Si la ORDEN está terminada, es VERDE
                 if (orden.estado === 'terminado') {
                   color = '#10b981'; // 🟢 Verde: Terminado / Pagado
                 }
-                // 2️⃣ Si NO está terminada, revisar si es fecha límite
                 else if (this.tipoFecha === 'limite' && detalle.fecha_limite) {
-                  // Construir la fecha límite COMPLETA
                   const [yearL, monthL, dayL] = detalle.fecha_limite.split('-').map(Number);
                   let hora = 23, minutos = 59, segundos = 59;
                   
@@ -205,18 +215,13 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
                   
                   const fechaLimiteCompleta = new Date(yearL, monthL - 1, dayL, hora, minutos, segundos);
                   
-                  // Verificar si está VENCIDO
                   if (ahora.getTime() > fechaLimiteCompleta.getTime()) {
                     color = '#f43f5e'; // 🔴 Rojo: Vencido
                   }
-                  // Verificar si está PRÓXIMO A VENCER (menos de 48 horas)
                   else if (fechaLimiteCompleta.getTime() - ahora.getTime() < 48 * 60 * 60 * 1000) {
                     color = '#f59e0b'; // 🟡 Amarillo: Próximo a vencer
                   }
-                  // Si no está vencido ni próximo, se queda MORADO (Normal)
                 }
-                // Si es fecha de registro, y no está terminada, se queda MORADO (Normal)
-                // ================================================================
                 
                 const doctorNombre = orden.doctor?.nombre?.substring(0, 20) || 'Sin doctor';
                 const servicioNombre = detalle.servicio?.nombre?.substring(0, 25) || 'Sin servicio';
@@ -358,8 +363,10 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     this.aplicarFiltros();
   }
 
+  // ✅ MODIFICADO: aplicarFiltros sin scroll forzado
   aplicarFiltros() {
-    const scrollY = window.scrollY;
+    // ✅ Solo hacer scroll si NO estamos navegando (cambio de mes)
+    const debeScroll = !this.navegando;
     
     console.log('🔍 Aplicando filtros - Doctor seleccionado:', this.doctorSeleccionado?.id || 'Todos');
     
@@ -373,9 +380,15 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
       estado: this.estadoSeleccionado
     });
     
-    setTimeout(() => {
-      window.scrollTo(0, scrollY);
-    }, 100);
+    // ✅ Scroll suave solo si es necesario (clic en filtros, no navegación)
+    if (debeScroll) {
+      setTimeout(() => {
+        document.querySelector('.calendario-container')?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 300);
+    }
   }
   
   limpiarFiltros() {
@@ -392,6 +405,14 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
       tipo_fecha: this.tipoFecha,
       estado: 'todos'
     });
+    
+    // ✅ Scroll suave al limpiar filtros
+    setTimeout(() => {
+      document.querySelector('.calendario-container')?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }, 300);
   }
   
   ngOnDestroy() {
