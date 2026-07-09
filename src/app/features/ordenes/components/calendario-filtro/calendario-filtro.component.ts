@@ -34,15 +34,39 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   cargando: boolean = false;
   calendarApi: any = null;
   
-  // ✅ Flag para evitar scroll innecesario
+  // ✅ NUEVOS FILTROS: Mes y Año
+  mesSeleccionado: number = 7; // Julio por defecto
+  anoSeleccionado: number = 2026;
+  
+  // ✅ Lista de meses
+  meses = [
+    { value: 1, nombre: 'Enero' },
+    { value: 2, nombre: 'Febrero' },
+    { value: 3, nombre: 'Marzo' },
+    { value: 4, nombre: 'Abril' },
+    { value: 5, nombre: 'Mayo' },
+    { value: 6, nombre: 'Junio' },
+    { value: 7, nombre: 'Julio' },
+    { value: 8, nombre: 'Agosto' },
+    { value: 9, nombre: 'Septiembre' },
+    { value: 10, nombre: 'Octubre' },
+    { value: 11, nombre: 'Noviembre' },
+    { value: 12, nombre: 'Diciembre' }
+  ];
+  
+  // ✅ Lista de años (desde 2020 hasta 2040)
+  anos: number[] = [];
+  
+  // Flag para evitar scroll innecesario
   private navegando: boolean = false;
+  private actualizandoSelects: boolean = false;
   
   // Almacenar fecha/hora actual del servidor
   private fechaHoraActual: Date = new Date();
   
   private subscriptions: Subscription[] = [];
   
-  // CALENDAR OPTIONS CORREGIDO
+  // CALENDAR OPTIONS
   calendarOptions: any = {
     plugins: [dayGridPlugin, interactionPlugin],
     initialView: 'dayGridMonth',
@@ -66,7 +90,6 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     eventDidMount: this.onEventMount.bind(this),
     height: 'auto',
     loading: this.onLoading.bind(this),
-    // ✅ NUEVO: Callback para detectar navegación
     datesSet: this.onDatesSet.bind(this)
   };
 
@@ -85,6 +108,20 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
   ) {}
   
   ngOnInit() {
+    // ✅ Generar años (2016 - 2046)
+    const yearActual = new Date().getFullYear();
+   // ✅ Opción 2: 10 años atrás, 20 adelante (más amplio)
+      for (let i = yearActual - 10; i <= yearActual + 20; i++) {
+      this.anos.push(i);
+      }
+    
+    // ✅ Sincronizar mesSeleccionado con el mes actual
+    const fechaActual = new Date();
+    this.mesSeleccionado = fechaActual.getMonth() + 1;
+    this.anoSeleccionado = fechaActual.getFullYear();
+    
+    console.log('📆 Mes inicial:', this.mesSeleccionado, 'Año inicial:', this.anoSeleccionado);
+    
     this.obtenerFechaHoraServidor();
     
     if (this.doctores.length === 0) {
@@ -92,19 +129,68 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     }
   }
   
-  // ✅ NUEVO: Callback cuando cambia el mes
+  // ✅ NUEVO: Cambiar de mes
+  onMesChange() {
+    if (this.actualizandoSelects) return;
+    console.log('📆 Mes cambiado a:', this.mesSeleccionado);
+    this.irAMesAno(this.mesSeleccionado, this.anoSeleccionado);
+  }
+  
+  // ✅ NUEVO: Cambiar de año
+  onAnoChange() {
+    if (this.actualizandoSelects) return;
+    console.log('📅 Año cambiado a:', this.anoSeleccionado);
+    this.irAMesAno(this.mesSeleccionado, this.anoSeleccionado);
+  }
+  
+  // ✅ NUEVO: Ir a un mes y año específico
+  irAMesAno(mes: number, ano: number) {
+    if (this.calendarApi) {
+      const fecha = new Date(ano, mes - 1, 1);
+      this.calendarApi.gotoDate(fecha);
+      
+      // Actualizar los selects
+      this.actualizandoSelects = true;
+      this.mesSeleccionado = mes;
+      this.anoSeleccionado = ano;
+      this.actualizandoSelects = false;
+      
+      // Actualizar los filtros
+      this.filtrosAplicados.emit({
+        doctor_id: this.doctorSeleccionado?.id || null,
+        tipo_fecha: this.tipoFecha,
+        estado: this.estadoSeleccionado,
+        mes: mes,
+        ano: ano
+      });
+    }
+  }
+  
+  // Callback cuando cambia el mes en el calendario
   onDatesSet(info: any) {
-    // Marcar que estamos navegando para no hacer scroll innecesario
+    // ✅ Actualizar los selects de mes y año para que coincidan con el calendario
+    const fechaActual = info.view.currentStart;
+    const mes = fechaActual.getMonth() + 1;
+    const ano = fechaActual.getFullYear();
+    
+    console.log('📆 Calendario cambió a:', mes, ano);
+    
+    // ✅ Actualizar selects SIN disparar eventos
+    this.actualizandoSelects = true;
+    this.mesSeleccionado = mes;
+    this.anoSeleccionado = ano;
+    this.actualizandoSelects = false;
+    
     this.navegando = true;
     
-    // Emitir filtros sin scroll forzado
     this.filtrosAplicados.emit({
       doctor_id: this.doctorSeleccionado?.id || null,
       tipo_fecha: this.tipoFecha,
-      estado: this.estadoSeleccionado
+      estado: this.estadoSeleccionado,
+      mes: mes,
+      ano: ano
     });
     
-    // Resetear flag después de un breve momento
     setTimeout(() => {
       this.navegando = false;
     }, 300);
@@ -130,6 +216,19 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     this.cdr.detectChanges();
     if (this.fullCalendar) {
       this.calendarApi = this.fullCalendar.getApi();
+      
+      // ✅ Forzar sincronización inicial
+      setTimeout(() => {
+        const fechaActual = this.calendarApi.getDate();
+        const mes = fechaActual.getMonth() + 1;
+        const ano = fechaActual.getFullYear();
+        this.actualizandoSelects = true;
+        this.mesSeleccionado = mes;
+        this.anoSeleccionado = ano;
+        this.actualizandoSelects = false;
+        this.cdr.detectChanges();
+        console.log('📆 Sincronización inicial - Mes:', mes, 'Año:', ano);
+      }, 100);
     }
   }
 
@@ -298,6 +397,13 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     
     this.modalBusqueda = '';
     this.modalVisible = true;
+    
+    this.filtrosAplicados.emit({
+      fecha_inicio: fechaStr,
+      fecha_fin: fechaStr,
+      tipo_fecha: this.tipoFecha,
+      doctor_id: this.doctorSeleccionado?.id || null
+    });
   }
 
   filtrarModalEventos() {
@@ -363,11 +469,7 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     this.aplicarFiltros();
   }
 
-  // ✅ MODIFICADO: aplicarFiltros sin scroll forzado
   aplicarFiltros() {
-    // ✅ Solo hacer scroll si NO estamos navegando (cambio de mes)
-    const debeScroll = !this.navegando;
-    
     console.log('🔍 Aplicando filtros - Doctor seleccionado:', this.doctorSeleccionado?.id || 'Todos');
     
     if (this.calendarApi) {
@@ -377,42 +479,36 @@ export class CalendarioFiltroComponent implements OnInit, OnDestroy, AfterViewIn
     this.filtrosAplicados.emit({
       doctor_id: this.doctorSeleccionado?.id || null,
       tipo_fecha: this.tipoFecha,
-      estado: this.estadoSeleccionado
+      estado: this.estadoSeleccionado,
+      mes: this.mesSeleccionado,
+      ano: this.anoSeleccionado
     });
-    
-    // ✅ Scroll suave solo si es necesario (clic en filtros, no navegación)
-    if (debeScroll) {
-      setTimeout(() => {
-        document.querySelector('.calendario-container')?.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }, 300);
-    }
   }
   
   limpiarFiltros() {
+    const fechaActual = new Date();
     this.doctorSeleccionado = null;
     this.tipoFecha = 'limite';
     this.estadoSeleccionado = 'todos';
     
+    // ✅ Sincronizar con la fecha actual
+    this.actualizandoSelects = true;
+    this.mesSeleccionado = fechaActual.getMonth() + 1;
+    this.anoSeleccionado = fechaActual.getFullYear();
+    this.actualizandoSelects = false;
+    
     if (this.calendarApi) {
+      this.calendarApi.gotoDate(fechaActual);
       this.calendarApi.refetchEvents();
     }
     
     this.filtrosAplicados.emit({
       doctor_id: null,
       tipo_fecha: this.tipoFecha,
-      estado: 'todos'
+      estado: 'todos',
+      mes: this.mesSeleccionado,
+      ano: this.anoSeleccionado
     });
-    
-    // ✅ Scroll suave al limpiar filtros
-    setTimeout(() => {
-      document.querySelector('.calendario-container')?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
-    }, 300);
   }
   
   ngOnDestroy() {

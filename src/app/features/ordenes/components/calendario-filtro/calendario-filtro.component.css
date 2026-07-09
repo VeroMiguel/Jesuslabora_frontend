@@ -36,6 +36,10 @@
   margin-bottom: 6px;
 }
 
+/* ============================================
+   RADIO BUTTONS - VISIBILIDAD COMPLETA
+   ============================================ */
+
 .radio-group {
   display: flex;
   gap: 12px;
@@ -45,7 +49,6 @@
   padding: 4px;
 }
 
-/* ✅ CORREGIDO: Texto visible en todos los temas */
 .radio-label {
   display: flex;
   align-items: center;
@@ -53,10 +56,11 @@
   padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   font-size: 0.85rem;
   font-weight: 500;
-  color: #0f172a; /* Color fijo para visibilidad */
+  background: transparent;
+  color: #0f172a;
 }
 
 .radio-label input {
@@ -64,14 +68,83 @@
   accent-color: #6366f1;
 }
 
+.radio-label .radio-text {
+  color: #0f172a;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+/* ✅ Estado ACTIVO (seleccionado) */
 .radio-label.active {
   background: #6366f1;
   color: white;
 }
 
+.radio-label.active .radio-text {
+  color: white !important;
+}
+
 .radio-label.active input {
   accent-color: white;
 }
+
+/* ✅ Hover en modo claro */
+.radio-label:hover:not(.active) {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.radio-label:hover:not(.active) .radio-text {
+  color: #6366f1;
+}
+
+/* ============================================
+   MODO OSCURO - RADIO BUTTONS (CORREGIDO)
+   ============================================ */
+
+/* ✅ Usar :host-context en lugar de [data-theme="dark"] */
+:host-context([data-theme="dark"]) .radio-group {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:host-context([data-theme="dark"]) .radio-label {
+  background: transparent;
+  color: #94a3b8;
+}
+
+:host-context([data-theme="dark"]) .radio-label .radio-text {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+:host-context([data-theme="dark"]) .radio-label.active {
+  background: #6366f1;
+  color: white;
+}
+
+:host-context([data-theme="dark"]) .radio-label.active .radio-text {
+  color: white !important;
+}
+
+:host-context([data-theme="dark"]) .radio-label.active input {
+  accent-color: white;
+}
+
+:host-context([data-theme="dark"]) .radio-label:hover:not(.active) {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+:host-context([data-theme="dark"]) .radio-label:hover:not(.active) .radio-text {
+  color: #818cf8;
+}
+
+:host-context([data-theme="dark"]) .radio-label.active:hover .radio-text {
+  color: white !important;
+}
+
+/* ============================================
+   FIN RADIO BUTTONS
+   ============================================ */
 
 .form-control {
   width: 100%;
@@ -533,125 +606,150 @@
 }
 
 /* ============================================
-   TEMA OSCURO - CORRECCIONES
+   MODO OSCURO - CORRECCIONES GLOBALES (CORREGIDO)
    ============================================ */
-[data-theme="dark"] .calendario-container {
+
+/* ✅ Usar :host-context en lugar de [data-theme="dark"] */
+:host-context([data-theme="dark"]) .calendario-container {
   background: #0f172a;
 }
 
-[data-theme="dark"] .calendario-header {
+:host-context([data-theme="dark"]) .calendario-header {
   background: #1e293b;
 }
 
-[data-theme="dark"] .radio-group {
-  background: #0f172a;
-  border-color: #334155;
-}
-
-/* ✅ CORREGIDO: Texto visible en modo oscuro */
-[data-theme="dark"] .radio-label {
-  color: #f1f5f9 !important;
-}
-
-[data-theme="dark"] .radio-label.active {
-  background: #6366f1;
-  color: white;
-}
-
-[data-theme="dark"] .radio-label.active input {
-  accent-color: white;
-}
-
-[data-theme="dark"] .form-control {
+:host-context([data-theme="dark"]) .form-control {
   background: #0f172a;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .btn-limpiar {
+:host-context([data-theme="dark"]) .btn-limpiar {
   background: #1e293b;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .btn-limpiar:hover {
+:host-context([data-theme="dark"]) .btn-limpiar:hover {
   background: #f43f5e;
   color: white;
 }
 
-[data-theme="dark"] .leyenda {
+:host-context([data-theme="dark"]) .leyenda {
   border-color: #334155;
 }
 
-[data-theme="dark"] .leyenda-item {
+:host-context([data-theme="dark"]) .leyenda-item {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .filtro-item label {
+:host-context([data-theme="dark"]) .filtro-item label {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .modal-container {
+:host-context([data-theme="dark"]) .modal-container {
   background: #1e293b;
 }
 
-[data-theme="dark"] .modal-header h3 {
+:host-context([data-theme="dark"]) .modal-header h3 {
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .modal-search-input {
+:host-context([data-theme="dark"]) .modal-search-input {
   background: #0f172a;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .modal-evento:hover {
+:host-context([data-theme="dark"]) .modal-evento:hover {
   background: #0f172a;
 }
 
-[data-theme="dark"] .modal-evento-titulo {
+:host-context([data-theme="dark"]) .modal-evento-titulo {
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .modal-evento-detalle {
+:host-context([data-theme="dark"]) .modal-evento-detalle {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .modal-close {
+:host-context([data-theme="dark"]) .modal-close {
   background: #0f172a;
   color: #94a3b8;
 }
 
-[data-theme="dark"] .modal-close:hover {
+:host-context([data-theme="dark"]) .modal-close:hover {
   background: #f43f5e;
   color: white;
 }
 
-[data-theme="dark"] .modal-header {
+:host-context([data-theme="dark"]) .modal-header {
   border-color: #334155;
 }
 
-[data-theme="dark"] .modal-search {
+:host-context([data-theme="dark"]) .modal-search {
   border-color: #334155;
 }
 
-[data-theme="dark"] .modal-footer {
+:host-context([data-theme="dark"]) .modal-footer {
   border-color: #334155;
 }
 
-[data-theme="dark"] .modal-evento {
+:host-context([data-theme="dark"]) .modal-evento {
   border-color: transparent;
 }
 
-[data-theme="dark"] .modal-evento:hover {
+:host-context([data-theme="dark"]) .modal-evento:hover {
   border-color: #334155;
 }
 
-[data-theme="dark"] .modal-badge {
+:host-context([data-theme="dark"]) .modal-badge {
   background: rgba(99, 102, 241, 0.2);
   color: #818cf8;
 }
 
-[data-theme="dark"] .modal-empty {
+:host-context([data-theme="dark"]) .modal-empty {
   color: #64748b;
+}
+/* calendario-filtro.component.css - AGREGAR AL FINAL */
+
+/* ============================================
+   ESTILOS PARA FILTROS DE MES Y AÑO
+   ============================================ */
+
+.filtro-mes {
+  min-width: 120px;
+}
+
+.filtro-ano {
+  min-width: 90px;
+}
+
+.filtro-mes .form-control,
+.filtro-ano .form-control {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Responsive para filtros de mes/año */
+@media (max-width: 768px) {
+  .filtro-mes,
+  .filtro-ano {
+    min-width: auto;
+    flex: 1;
+  }
+  
+  .filtro-mes .form-control,
+  .filtro-ano .form-control {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtro-mes,
+  .filtro-ano {
+    min-width: 45%;
+    flex: 0 0 45%;
+  }
 }

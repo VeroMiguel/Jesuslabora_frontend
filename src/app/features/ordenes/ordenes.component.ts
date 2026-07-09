@@ -931,9 +931,7 @@ getContadorTerminados(): number {
   return this.ordenes.filter(o => o.estado === 'terminado').length;
 }
 
-// ordenes.component.ts - AGREGAR ESTE MÉTODO
-
-// ordenes.component.ts - Modificar aplicarFiltrosDesdeCalendario
+// ordenes.component.ts - REEMPLAZAR EL MÉTODO COMPLETO
 
 aplicarFiltrosDesdeCalendario(filtros: any) {
   // ✅ Aplicar filtros desde el calendario a la tabla
@@ -958,9 +956,7 @@ aplicarFiltrosDesdeCalendario(filtros: any) {
   // ✅ Aplicar los filtros
   this.filtrarOrdenes();
   
-  // Scroll suave hacia la tabla
-  setTimeout(() => {
-    document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
+  // ✅ ELIMINADO: NO hacer scroll en ningún caso
+  // La vista permanece en la posición actual del usuario
 }
 }

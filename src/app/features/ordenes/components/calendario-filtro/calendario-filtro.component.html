@@ -2,6 +2,7 @@
 <div class="calendario-container">
   <div class="calendario-header">
     <div class="filtros-group">
+      <!-- Filtro: Doctor -->
       <div class="filtro-item">
         <label>👨‍⚕️ Doctor</label>
         <app-searchable-select
@@ -13,20 +14,38 @@
         ></app-searchable-select>
       </div>
       
+      <!-- Filtro: Mostrar (Fecha Límite / Fecha Registro) -->
       <div class="filtro-item">
         <label>📅 Mostrar</label>
         <div class="radio-group">
           <label class="radio-label" [class.active]="tipoFecha === 'limite'">
             <input type="radio" value="limite" [(ngModel)]="tipoFecha" (change)="aplicarFiltros()">
-            <span>Fecha Límite</span>
+            <span class="radio-text">Fecha Límite</span>
           </label>
           <label class="radio-label" [class.active]="tipoFecha === 'registro'">
             <input type="radio" value="registro" [(ngModel)]="tipoFecha" (change)="aplicarFiltros()">
-            <span>Fecha Registro</span>
+            <span class="radio-text">Fecha Registro</span>
           </label>
         </div>
       </div>
       
+    <!-- ✅ NUEVO: Filtro por MES -->
+    <div class="filtro-item filtro-mes">
+      <label>📆 Mes</label>
+      <select class="form-control" [(ngModel)]="mesSeleccionado" (change)="onMesChange()">
+        <option *ngFor="let mes of meses" [value]="mes.value">{{ mes.nombre }}</option>
+      </select>
+    </div>
+
+    <!-- ✅ NUEVO: Filtro por AÑO -->
+    <div class="filtro-item filtro-ano">
+      <label>📅 Año</label>
+      <select class="form-control" [(ngModel)]="anoSeleccionado" (change)="onAnoChange()">
+        <option *ngFor="let ano of anos" [value]="ano">{{ ano }}</option>
+      </select>
+    </div>
+          
+      <!-- Filtro: Estado -->
       <div class="filtro-item">
         <label>📊 Estado</label>
         <select class="form-control" [(ngModel)]="estadoSeleccionado" (change)="aplicarFiltros()">
@@ -36,6 +55,7 @@
         </select>
       </div>
       
+      <!-- Botón Limpiar -->
       <div class="filtro-actions">
         <button class="btn-limpiar" (click)="limpiarFiltros()">
           <i class="fas fa-eraser"></i> Limpiar
